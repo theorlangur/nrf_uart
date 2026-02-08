@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(NrfLibGeneral VERSION 1.0.0)
+project(NrfLibUART VERSION 1.0.0)
 
 zephyr_library_named(NrfLibUART)
 
