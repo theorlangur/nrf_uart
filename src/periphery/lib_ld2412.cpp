@@ -185,6 +185,8 @@ LD2412::ExpectedResult LD2412::ReadFrame()
 
 LD2412::ExpectedResult LD2412::TryReadSingleFrame(int attempts, bool flush, Drain drain)
 {
+    if (m_ContinuousRead)
+        return TryReadFrame(attempts, flush, drain);
     RxBlock _RxBlock(*this);
     return TryReadFrame(attempts, flush, drain);
 }
