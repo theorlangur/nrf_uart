@@ -370,15 +370,15 @@ private:
         }
     }
 
-#define TRY_UART_COMM(f, location, ec) \
+#define LD2412_TRY_UART_COMM(f, location, ec) \
     if (auto r = f; !r) \
         return to_result(std::move(r), location, ec)
 
-#define TRY_UART_COMM_CMD(f, location, ec) \
+#define LD2412_TRY_UART_COMM_CMD(f, location, ec) \
     if (auto r = f; !r) \
         return to_cmd_result(std::move(r), location, ec)
 
-#define TRY_UART_COMM_CMD_WITH_RETRY(f, location, ec) \
+#define LD2412_TRY_UART_COMM_CMD_WITH_RETRY(f, location, ec) \
     if (auto r = f; !r) \
     {\
         if (retry) \
@@ -394,18 +394,18 @@ private:
     {
         using namespace uart::primitives;
         //1. header
-        TRY_UART_COMM(Send(kFrameHeader, sizeof(kFrameHeader)), "SendFrameV2", ErrorCode::SendFrame);
+        LD2412_TRY_UART_COMM(Send(kFrameHeader, sizeof(kFrameHeader)), "SendFrameV2", ErrorCode::SendFrame);
 
         //2. length
         {
             uint16_t len = (sizeof(args) + ...);
-            TRY_UART_COMM(Send((uint8_t const*)&len, sizeof(len)), "SendFrameV2", ErrorCode::SendFrame);
+            LD2412_TRY_UART_COMM(Send((uint8_t const*)&len, sizeof(len)), "SendFrameV2", ErrorCode::SendFrame);
         }
         //3. data
-        TRY_UART_COMM(uart::primitives::write_any(*this, std::forward<T>(args)...), "SendFrameV2", ErrorCode::SendFrame);
+        LD2412_TRY_UART_COMM(uart::primitives::write_any(*this, std::forward<T>(args)...), "SendFrameV2", ErrorCode::SendFrame);
 
         //4. footer
-        TRY_UART_COMM(Send(kFrameFooter, sizeof(kFrameFooter)), "SendFrameV2", ErrorCode::SendFrame);
+        LD2412_TRY_UART_COMM(Send(kFrameFooter, sizeof(kFrameFooter)), "SendFrameV2", ErrorCode::SendFrame);
 
         return std::ref(*this);
     }
@@ -414,23 +414,21 @@ private:
     ExpectedResult RecvFrameV2(T&&... args)
     {
         constexpr const size_t arg_size = (uart::primitives::uart_sizeof<std::remove_cvref_t<T>>() + ...);
-        //if (m_dbg) m_Dbg = true;
-        //ScopeExit resetDbg = [&]{ if (m_dbg) m_Dbg = false; };
-        TRY_UART_COMM(uart::primitives::match_bytes(*this, kFrameHeader), "RecvFrameV2", ErrorCode::RecvFrame_Malformed);
+        LD2412_TRY_UART_COMM(uart::primitives::match_bytes(*this, kFrameHeader), "RecvFrameV2", ErrorCode::RecvFrame_Malformed);
         if (m_dbg) printk("RecvFrameV2: matched header\n"); 
         uint16_t len;
-        TRY_UART_COMM(uart::primitives::read_into(*this, len), "RecvFrameV2", ErrorCode::RecvFrame_Malformed);
+        LD2412_TRY_UART_COMM(uart::primitives::read_into(*this, len), "RecvFrameV2", ErrorCode::RecvFrame_Malformed);
         if (m_dbg) printk("RecvFrameV2: len: %d\n", len);
         if (arg_size > len)
             return std::unexpected(Err{{}, "RecvFrameV2 len invalid", ErrorCode::RecvFrame_Malformed}); 
 
-        TRY_UART_COMM(uart::primitives::read_any_limited(*this, len, std::forward<T>(args)...), "RecvFrameV2", ErrorCode::RecvFrame_Malformed);
+        LD2412_TRY_UART_COMM(uart::primitives::read_any_limited(*this, len, std::forward<T>(args)...), "RecvFrameV2", ErrorCode::RecvFrame_Malformed);
         if (len)
         {
-            TRY_UART_COMM(uart::primitives::skip_bytes(*this, len), "RecvFrameV2", ErrorCode::RecvFrame_Malformed);
+            LD2412_TRY_UART_COMM(uart::primitives::skip_bytes(*this, len), "RecvFrameV2", ErrorCode::RecvFrame_Malformed);
         }
         if (m_dbg) printk("RecvFrameV2: mathcing footer\n");
-        TRY_UART_COMM(uart::primitives::match_bytes(*this, kFrameFooter), "RecvFrameV2", ErrorCode::RecvFrame_Malformed);
+        LD2412_TRY_UART_COMM(uart::primitives::match_bytes(*this, kFrameFooter), "RecvFrameV2", ErrorCode::RecvFrame_Malformed);
         if (m_dbg) printk("RecvFrameV2: matched footer\n");
         return std::ref(*this);
     }
@@ -468,17 +466,15 @@ private:
         {
             if (retry != kMaxRetry)
             {
-                /*if (m_dbg)*/ printk("Sending command %x retry: %d\n", uint16_t(cmd), (kMaxRetry - retry));
+                if (m_dbg) printk("Sending command %x retry: %d\n", uint16_t(cmd), (kMaxRetry - retry));
                 k_msleep(kDefaultWait); 
                 (void)Channel::Drain(false).has_value();
             }
-            //TRY_UART_COMM_CMD_WITH_RETRY(Flush(), "SendCommandV2", ErrorCode::SendCommand_Failed);
-            //if (m_dbg) FMT_PRINT("Sent cmd {}\n", uint16_t(cmd));
-            TRY_UART_COMM_CMD_WITH_RETRY(SendFrameExpandArgs(std::make_index_sequence<sizeof...(ToSend)>()), "SendCommandV2", ErrorCode::SendCommand_Failed);
+            LD2412_TRY_UART_COMM_CMD_WITH_RETRY(SendFrameExpandArgs(std::make_index_sequence<sizeof...(ToSend)>()), "SendCommandV2", ErrorCode::SendCommand_Failed);
             if (m_dbg) printk("Wait all\n");
-            TRY_UART_COMM_CMD_WITH_RETRY(WaitAllSent(), "SendCommandV2", ErrorCode::SendCommand_Failed);
+            LD2412_TRY_UART_COMM_CMD_WITH_RETRY(WaitAllSent(), "SendCommandV2", ErrorCode::SendCommand_Failed);
             if (m_dbg) printk("Receiving %d args\n", sizeof...(ToRecv));
-            TRY_UART_COMM_CMD_WITH_RETRY(RecvFrameExpandArgs(std::make_index_sequence<sizeof...(ToRecv)>()), "SendCommandV2", ErrorCode::SendCommand_Failed);
+            LD2412_TRY_UART_COMM_CMD_WITH_RETRY(RecvFrameExpandArgs(std::make_index_sequence<sizeof...(ToRecv)>()), "SendCommandV2", ErrorCode::SendCommand_Failed);
             break;
         }
         return std::ref(*this);

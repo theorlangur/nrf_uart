@@ -44,47 +44,45 @@ LD2412::LD2412(const struct device *pUART):
 LD2412::ExpectedResult LD2412::Init()
 {
     SetDefaultWait(kDefaultWait);
-    TRY_UART_COMM(Configure(), "Init", ErrorCode::Init);
-    TRY_UART_COMM(Open(), "Init", ErrorCode::Init);
+    LD2412_TRY_UART_COMM(Configure(), "Init", ErrorCode::Init);
+    LD2412_TRY_UART_COMM(Open(), "Init", ErrorCode::Init);
     return ReloadConfig();
 }
 
 LD2412::ExpectedResult LD2412::ReloadConfig()
 {
-    //DbgNow dbg(this);
-    //Channel::m_Dbg = true;
     RxBlock _RxBlock(*this);
-    TRY_UART_COMM(OpenCommandMode(), "ReloadConfig", ErrorCode::SendCommand_Failed);
-    TRY_UART_COMM(UpdateVersion(), "ReloadConfig", ErrorCode::SendCommand_Failed);
-    TRY_UART_COMM(SendCommandV2(Cmd::ReadBaseParams, to_send(), to_recv(m_Configuration.m_Base)), "ReloadConfig", ErrorCode::SendCommand_Failed);
-    TRY_UART_COMM(SendCommandV2(Cmd::GetMoveSensitivity, to_send(), to_recv(m_Configuration.m_MoveThreshold)), "ReloadConfig", ErrorCode::SendCommand_Failed);
-    TRY_UART_COMM(SendCommandV2(Cmd::GetStillSensitivity, to_send(), to_recv(m_Configuration.m_StillThreshold)), "ReloadConfig", ErrorCode::SendCommand_Failed);
-    TRY_UART_COMM(SendCommandV2(Cmd::GetMAC, to_send(uint16_t(0x0001)), to_recv(m_BluetoothMAC)), "ReloadConfig", ErrorCode::SendCommand_Failed);
-    TRY_UART_COMM(SendCommandV2(Cmd::GetDistanceRes, to_send(), to_recv(m_DistanceResolution)), "UpdateDistanceRes", ErrorCode::SendCommand_Failed);
-    TRY_UART_COMM(CloseCommandMode(), "ReloadConfig", ErrorCode::SendCommand_Failed);
+    LD2412_TRY_UART_COMM(OpenCommandMode(), "ReloadConfig", ErrorCode::SendCommand_Failed);
+    LD2412_TRY_UART_COMM(UpdateVersion(), "ReloadConfig", ErrorCode::SendCommand_Failed);
+    LD2412_TRY_UART_COMM(SendCommandV2(Cmd::ReadBaseParams, to_send(), to_recv(m_Configuration.m_Base)), "ReloadConfig", ErrorCode::SendCommand_Failed);
+    LD2412_TRY_UART_COMM(SendCommandV2(Cmd::GetMoveSensitivity, to_send(), to_recv(m_Configuration.m_MoveThreshold)), "ReloadConfig", ErrorCode::SendCommand_Failed);
+    LD2412_TRY_UART_COMM(SendCommandV2(Cmd::GetStillSensitivity, to_send(), to_recv(m_Configuration.m_StillThreshold)), "ReloadConfig", ErrorCode::SendCommand_Failed);
+    LD2412_TRY_UART_COMM(SendCommandV2(Cmd::GetMAC, to_send(uint16_t(0x0001)), to_recv(m_BluetoothMAC)), "ReloadConfig", ErrorCode::SendCommand_Failed);
+    LD2412_TRY_UART_COMM(SendCommandV2(Cmd::GetDistanceRes, to_send(), to_recv(m_DistanceResolution)), "UpdateDistanceRes", ErrorCode::SendCommand_Failed);
+    LD2412_TRY_UART_COMM(CloseCommandMode(), "ReloadConfig", ErrorCode::SendCommand_Failed);
     return std::ref(*this);
 }
 
 LD2412::ExpectedResult LD2412::UpdateDistanceRes()
 {
-    TRY_UART_COMM(OpenCommandMode(), "UpdateDistanceRes", ErrorCode::SendCommand_Failed);
-    TRY_UART_COMM(SendCommandV2(Cmd::GetDistanceRes, to_send(), to_recv(m_DistanceResolution)), "UpdateDistanceRes", ErrorCode::SendCommand_Failed);
-    TRY_UART_COMM(CloseCommandMode(), "UpdateDistanceRes", ErrorCode::SendCommand_Failed);
+    LD2412_TRY_UART_COMM(OpenCommandMode(), "UpdateDistanceRes", ErrorCode::SendCommand_Failed);
+    LD2412_TRY_UART_COMM(SendCommandV2(Cmd::GetDistanceRes, to_send(), to_recv(m_DistanceResolution)), "UpdateDistanceRes", ErrorCode::SendCommand_Failed);
+    LD2412_TRY_UART_COMM(CloseCommandMode(), "UpdateDistanceRes", ErrorCode::SendCommand_Failed);
     return std::ref(*this);
 }
 
 LD2412::ExpectedResult LD2412::SwitchBluetooth(bool on)
 {
     SetDefaultWait(kDefaultWait);
-    TRY_UART_COMM(OpenCommandMode(), "SwitchBluetooth", ErrorCode::BTFailed);
-    TRY_UART_COMM(SendCommandV2(Cmd::SwitchBluetooth, to_send(uint16_t(on)), to_recv()), "SwitchBluetooth", ErrorCode::BTFailed);
-    TRY_UART_COMM(SendFrameV2(Cmd::Restart), "SwitchBluetooth", ErrorCode::BTFailed);
+    LD2412_TRY_UART_COMM(OpenCommandMode(), "SwitchBluetooth", ErrorCode::BTFailed);
+    LD2412_TRY_UART_COMM(SendCommandV2(Cmd::SwitchBluetooth, to_send(uint16_t(on)), to_recv()), "SwitchBluetooth", ErrorCode::BTFailed);
+    LD2412_TRY_UART_COMM(SendFrameV2(Cmd::Restart), "SwitchBluetooth", ErrorCode::BTFailed);
     k_msleep(1000); 
-    TRY_UART_COMM(uart::primitives::flush_and_wait(*this, {kRestartTimeout, "SwitchBluetooth"}), "SwitchBluetooth", ErrorCode::BTFailed);
+    LD2412_TRY_UART_COMM(uart::primitives::flush_and_wait(*this, {kRestartTimeout, "SwitchBluetooth"}), "SwitchBluetooth", ErrorCode::BTFailed);
     if (m_Mode != SystemMode::Simple)
     {
         auto rs = ChangeConfiguration().SetSystemMode(m_Mode).EndChange();
-        TRY_UART_COMM(rs, "SwitchBluetooth", ErrorCode::BTFailed);
+        LD2412_TRY_UART_COMM(rs, "SwitchBluetooth", ErrorCode::BTFailed);
     }
     return ReloadConfig();
 }
@@ -92,14 +90,14 @@ LD2412::ExpectedResult LD2412::SwitchBluetooth(bool on)
 LD2412::ExpectedResult LD2412::Restart()
 {
     SetDefaultWait(kDefaultWait);
-    TRY_UART_COMM(OpenCommandMode(), "Restart", ErrorCode::RestartFailed);
-    TRY_UART_COMM(SendFrameV2(Cmd::Restart), "Restart", ErrorCode::RestartFailed);
+    LD2412_TRY_UART_COMM(OpenCommandMode(), "Restart", ErrorCode::RestartFailed);
+    LD2412_TRY_UART_COMM(SendFrameV2(Cmd::Restart), "Restart", ErrorCode::RestartFailed);
     k_msleep(1000); 
-    TRY_UART_COMM(uart::primitives::flush_and_wait(*this, {kRestartTimeout, "Restart"}), "Restart", ErrorCode::RestartFailed);
+    LD2412_TRY_UART_COMM(uart::primitives::flush_and_wait(*this, {kRestartTimeout, "Restart"}), "Restart", ErrorCode::RestartFailed);
     if (m_Mode != SystemMode::Simple)
     {
         auto rs = ChangeConfiguration().SetSystemMode(m_Mode).EndChange();
-        TRY_UART_COMM(rs, "SwitchBluetooth", ErrorCode::BTFailed);
+        LD2412_TRY_UART_COMM(rs, "SwitchBluetooth", ErrorCode::BTFailed);
     }
     return std::ref(*this);
 }
@@ -107,15 +105,15 @@ LD2412::ExpectedResult LD2412::Restart()
 LD2412::ExpectedResult LD2412::FactoryReset()
 {
     SetDefaultWait(uart::duration_ms_t(1000));
-    TRY_UART_COMM(OpenCommandMode(), "FactoryReset", ErrorCode::FactoryResetFailed);
-    TRY_UART_COMM(SendCommandV2(Cmd::FactoryReset, to_send(), to_recv()), "FactoryReset", ErrorCode::FactoryResetFailed);
-    TRY_UART_COMM(SendFrameV2(Cmd::Restart), "FactoryReset", ErrorCode::FactoryResetFailed);
+    LD2412_TRY_UART_COMM(OpenCommandMode(), "FactoryReset", ErrorCode::FactoryResetFailed);
+    LD2412_TRY_UART_COMM(SendCommandV2(Cmd::FactoryReset, to_send(), to_recv()), "FactoryReset", ErrorCode::FactoryResetFailed);
+    LD2412_TRY_UART_COMM(SendFrameV2(Cmd::Restart), "FactoryReset", ErrorCode::FactoryResetFailed);
     k_msleep(1000); 
-    TRY_UART_COMM(uart::primitives::flush_and_wait(*this, {kRestartTimeout, "FactoryReset"}), "FactoryReset", ErrorCode::FactoryResetFailed);
+    LD2412_TRY_UART_COMM(uart::primitives::flush_and_wait(*this, {kRestartTimeout, "FactoryReset"}), "FactoryReset", ErrorCode::FactoryResetFailed);
     if (m_Mode != SystemMode::Simple)
     {
         auto rs = ChangeConfiguration().SetSystemMode(m_Mode).EndChange();
-        TRY_UART_COMM(rs, "FactoryReset", ErrorCode::FactoryResetFailed);
+        LD2412_TRY_UART_COMM(rs, "FactoryReset", ErrorCode::FactoryResetFailed);
     }
     return ReloadConfig();
 }
@@ -166,20 +164,20 @@ LD2412::ExpectedResult LD2412::ReadFrame()
     SystemMode mode;
     uint8_t check;
     uint16_t reportLen = 0;
-    TRY_UART_COMM(uart::primitives::read_until(*this, kDataFrameHeader[0], uart::duration_ms_t(1000), "Searching for header"), "ReadFrameReadFrame", ErrorCode::SimpleData_Malformed);
-    TRY_UART_COMM(uart::primitives::match_bytes(*this, kDataFrameHeader, "Matching header"), "ReadFrameReadFrame", ErrorCode::SimpleData_Malformed);
-    TRY_UART_COMM(uart::primitives::read_any(*this, reportLen, mode), "ReadFrameReadFrame", ErrorCode::SimpleData_Malformed);
-    TRY_UART_COMM(uart::primitives::match_bytes(*this, report_begin, "Matching rep begin"), "ReadFrameReadFrame", ErrorCode::SimpleData_Malformed);
-    TRY_UART_COMM(uart::primitives::read_into(*this, m_Presence), "ReadFrameReadFrame", ErrorCode::SimpleData_Malformed);//simple Part of the detection is always there
+    LD2412_TRY_UART_COMM(uart::primitives::read_until(*this, kDataFrameHeader[0], uart::duration_ms_t(1000), "Searching for header"), "ReadFrameReadFrame", ErrorCode::SimpleData_Malformed);
+    LD2412_TRY_UART_COMM(uart::primitives::match_bytes(*this, kDataFrameHeader, "Matching header"), "ReadFrameReadFrame", ErrorCode::SimpleData_Malformed);
+    LD2412_TRY_UART_COMM(uart::primitives::read_any(*this, reportLen, mode), "ReadFrameReadFrame", ErrorCode::SimpleData_Malformed);
+    LD2412_TRY_UART_COMM(uart::primitives::match_bytes(*this, report_begin, "Matching rep begin"), "ReadFrameReadFrame", ErrorCode::SimpleData_Malformed);
+    LD2412_TRY_UART_COMM(uart::primitives::read_into(*this, m_Presence), "ReadFrameReadFrame", ErrorCode::SimpleData_Malformed);//simple Part of the detection is always there
     if (mode == SystemMode::Energy)
     {
         if ((reportLen - 4 - sizeof(m_Presence)) != sizeof(m_Engeneering))
             return std::unexpected(Err{{"Wrong engeneering size"}, "ReadFrameReadFrame", ErrorCode::SimpleData_Malformed});
-        TRY_UART_COMM(uart::primitives::read_into(*this, m_Engeneering), "ReadFrameReadFrame", ErrorCode::SimpleData_Malformed);
+        LD2412_TRY_UART_COMM(uart::primitives::read_into(*this, m_Engeneering), "ReadFrameReadFrame", ErrorCode::SimpleData_Malformed);
     }
-    TRY_UART_COMM(uart::primitives::match_bytes(*this, report_end, "Matching rep end"), "ReadFrameReadFrame", ErrorCode::SimpleData_Malformed);
-    TRY_UART_COMM(uart::primitives::read_into(*this, check), "ReadFrameReadFrame", ErrorCode::SimpleData_Malformed);//simple Part of the detection is always there
-    TRY_UART_COMM(uart::primitives::match_bytes(*this, kDataFrameFooter, "Matching footer"), "ReadFrameReadFrame", ErrorCode::SimpleData_Malformed);
+    LD2412_TRY_UART_COMM(uart::primitives::match_bytes(*this, report_end, "Matching rep end"), "ReadFrameReadFrame", ErrorCode::SimpleData_Malformed);
+    LD2412_TRY_UART_COMM(uart::primitives::read_into(*this, check), "ReadFrameReadFrame", ErrorCode::SimpleData_Malformed);//simple Part of the detection is always there
+    LD2412_TRY_UART_COMM(uart::primitives::match_bytes(*this, kDataFrameFooter, "Matching footer"), "ReadFrameReadFrame", ErrorCode::SimpleData_Malformed);
     return std::ref(*this);
 }
 
@@ -205,11 +203,8 @@ void LD2412::StopContinuousReading()
 
 LD2412::ExpectedResult LD2412::TryReadFrame(int attempts, bool flush, Drain drain)
 {
-    //DbgNow dbg(this);
-    //Channel::m_Dbg = true;
     if (drain != Drain::No)
     {
-        //printf("TryReadFRame: draining first\n");
         SetDefaultWait(uart::duration_ms_t(0));
         int i = 0;
         for(; i < 100; ++i)
@@ -217,25 +212,17 @@ LD2412::ExpectedResult LD2412::TryReadFrame(int attempts, bool flush, Drain drai
             if (auto r = ReadFrame(); !r)
             {
                 if (i > 0)//if i is at least 2 that means that at least 1 iteration was successful 
-                {
                     break;
-                }
                 else if (drain == Drain::Try)
-                {
-                    //FMT_PRINT("TryReadFrame: no iterations; Trying to wait for read\n");
                     return TryReadFrame(attempts, flush, Drain::No);
-                }else
+                else
                     return r;
             }
         }
     }else
     {
-        //FMT_PRINTLN("TryReadFrame: no drain");
         SetDefaultWait(uart::duration_ms_t(kDefaultWait));
         auto ec = (m_Mode == SystemMode::Energy) ? ErrorCode::EnergyData_Failure : ErrorCode::SimpleData_Failure;
-        //if (flush)
-        //    TRY_UART_COMM(Flush(), "LD2412::TryReadFrame", ec);
-
         for(int i = 0; i < attempts; ++i)
         {
             if (auto r = ReadFrame(); !r)
@@ -252,9 +239,9 @@ LD2412::ExpectedResult LD2412::TryReadFrame(int attempts, bool flush, Drain drai
 LD2412::ExpectedResult LD2412::RunDynamicBackgroundAnalysis()
 {
     SetDefaultWait(kDefaultWait);
-    TRY_UART_COMM(OpenCommandMode(), "RunDynamicBackgroundAnalysis", ErrorCode::SendCommand_Failed);
-    TRY_UART_COMM(SendCommandV2(Cmd::RunDynamicBackgroundAnalysis, to_send(), to_recv()), "RunDynamicBackgroundAnalysis", ErrorCode::SendCommand_Failed);
-    TRY_UART_COMM(CloseCommandMode(), "RunDynamicBackgroundAnalysis", ErrorCode::SendCommand_Failed);
+    LD2412_TRY_UART_COMM(OpenCommandMode(), "RunDynamicBackgroundAnalysis", ErrorCode::SendCommand_Failed);
+    LD2412_TRY_UART_COMM(SendCommandV2(Cmd::RunDynamicBackgroundAnalysis, to_send(), to_recv()), "RunDynamicBackgroundAnalysis", ErrorCode::SendCommand_Failed);
+    LD2412_TRY_UART_COMM(CloseCommandMode(), "RunDynamicBackgroundAnalysis", ErrorCode::SendCommand_Failed);
     m_DynamicBackgroundAnalysis = true;
     return std::ref(*this);
 }
@@ -262,7 +249,7 @@ LD2412::ExpectedResult LD2412::RunDynamicBackgroundAnalysis()
 bool LD2412::IsDynamicBackgroundAnalysisRunning()
 {
     if (m_DynamicBackgroundAnalysis)
-        QueryDynamicBackgroundAnalysisRunState();
+        (void)QueryDynamicBackgroundAnalysisRunState().has_value();
     return m_DynamicBackgroundAnalysis;
 }
 
@@ -270,9 +257,9 @@ LD2412::ExpectedResult LD2412::QueryDynamicBackgroundAnalysisRunState()
 {
     SetDefaultWait(kDefaultWait);
     uint16_t active = 0;
-    TRY_UART_COMM(OpenCommandMode(), "QueryDynamicBackgroundAnalysisRunState", ErrorCode::SendCommand_Failed);
-    TRY_UART_COMM(SendCommandV2(Cmd::QuearyDynamicBackgroundAnalysis, to_send(), to_recv(active)), "QueryDynamicBackgroundAnalysisRunState", ErrorCode::SendCommand_Failed);
-    TRY_UART_COMM(CloseCommandMode(), "QueryDynamicBackgroundAnalysisRunState", ErrorCode::SendCommand_Failed);
+    LD2412_TRY_UART_COMM(OpenCommandMode(), "QueryDynamicBackgroundAnalysisRunState", ErrorCode::SendCommand_Failed);
+    LD2412_TRY_UART_COMM(SendCommandV2(Cmd::QuearyDynamicBackgroundAnalysis, to_send(), to_recv(active)), "QueryDynamicBackgroundAnalysisRunState", ErrorCode::SendCommand_Failed);
+    LD2412_TRY_UART_COMM(CloseCommandMode(), "QueryDynamicBackgroundAnalysisRunState", ErrorCode::SendCommand_Failed);
     m_DynamicBackgroundAnalysis = active != 0;
     return std::ref(*this);
 }
@@ -358,38 +345,36 @@ LD2412::ExpectedResult LD2412::ConfigBlock::EndChange()
 {
     if (!m_Changes)
         return std::ref(d);
-    //Channel::DbgNow _dbg(&d);
-    //DbgNow _dbg2(&d);
     ScopeExit clearChanges = [&]{ m_Changes = 0; };
     if (d.m_ContinuousRead)
         return std::unexpected(Err{{}, "ConfigBlock::EndChange", ErrorCode::WrongState});
 
-    TRY_UART_COMM(d.OpenCommandMode(), "LD2412::ConfigBlock::EndChange", ErrorCode::SendCommand_Failed);
+    LD2412_TRY_UART_COMM(d.OpenCommandMode(), "LD2412::ConfigBlock::EndChange", ErrorCode::SendCommand_Failed);
     if (m_Changed.Mode)
     {
         d.m_Mode = m_NewMode; 
-        TRY_UART_COMM(d.SetSystemModeInternal(d.m_Mode), "LD2412::ConfigBlock::EndChange", ErrorCode::SendCommand_Failed);
+        LD2412_TRY_UART_COMM(d.SetSystemModeInternal(d.m_Mode), "LD2412::ConfigBlock::EndChange", ErrorCode::SendCommand_Failed);
     }
     if (m_Changed.DistanceRes)
     {
         d.m_DistanceResolution.m_Res = m_NewDistanceRes; 
-        TRY_UART_COMM(d.SetDistanceResInternal(m_NewDistanceRes), "LD2412::ConfigBlock::EndChange", ErrorCode::SendCommand_Failed);
+        LD2412_TRY_UART_COMM(d.SetDistanceResInternal(m_NewDistanceRes), "LD2412::ConfigBlock::EndChange", ErrorCode::SendCommand_Failed);
     }
     if (m_Changed.MinDistance || m_Changed.MaxDistance || m_Changed.Timeout || m_Changed.OutPin)
     {
         d.m_Configuration.m_Base = m_Configuration.m_Base;
-        TRY_UART_COMM(d.SendCommandV2(Cmd::WriteBaseParams ,to_send(d.m_Configuration.m_Base) ,to_recv()), "LD2412::ConfigBlock::EndChange", ErrorCode::SendCommand_Failed);
+        LD2412_TRY_UART_COMM(d.SendCommandV2(Cmd::WriteBaseParams ,to_send(d.m_Configuration.m_Base) ,to_recv()), "LD2412::ConfigBlock::EndChange", ErrorCode::SendCommand_Failed);
     }
     if (m_Changed.MoveThreshold)
     {
         std::ranges::copy(m_Configuration.m_MoveThreshold, d.m_Configuration.m_MoveThreshold);
-        TRY_UART_COMM(d.SendCommandV2(Cmd::SetMoveSensitivity ,to_send(d.m_Configuration.m_MoveThreshold) ,to_recv()), "LD2412::ConfigBlock::EndChange", ErrorCode::SendCommand_Failed);
+        LD2412_TRY_UART_COMM(d.SendCommandV2(Cmd::SetMoveSensitivity ,to_send(d.m_Configuration.m_MoveThreshold) ,to_recv()), "LD2412::ConfigBlock::EndChange", ErrorCode::SendCommand_Failed);
     }
     if (m_Changed.StillThreshold)
     {
         std::ranges::copy(m_Configuration.m_StillThreshold, d.m_Configuration.m_StillThreshold);
-        TRY_UART_COMM(d.SendCommandV2(Cmd::SetStillSensitivity ,to_send(d.m_Configuration.m_StillThreshold) ,to_recv()), "LD2412::ConfigBlock::EndChange", ErrorCode::SendCommand_Failed);
+        LD2412_TRY_UART_COMM(d.SendCommandV2(Cmd::SetStillSensitivity ,to_send(d.m_Configuration.m_StillThreshold) ,to_recv()), "LD2412::ConfigBlock::EndChange", ErrorCode::SendCommand_Failed);
     }
-    TRY_UART_COMM(d.CloseCommandMode(), "LD2412::ConfigBlock::EndChange", ErrorCode::SendCommand_Failed);
+    LD2412_TRY_UART_COMM(d.CloseCommandMode(), "LD2412::ConfigBlock::EndChange", ErrorCode::SendCommand_Failed);
     return std::ref(d);
 }
