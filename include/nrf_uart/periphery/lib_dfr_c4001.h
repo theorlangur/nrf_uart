@@ -2,8 +2,8 @@
 #define LIB_DFR_C4001_H_
 
 #include <zephyr/drivers/uart.h>
-#include "../lib_uart.h"
 #include <span>
+#include "../lib_uart.h"
 #include "../lib_uart_primitives.h"
 #include <lib_type_traits.hpp>
 
