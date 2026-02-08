@@ -45,6 +45,7 @@ public:
         RestartFailed,
         BTFailed,
         FactoryResetFailed,
+        WrongState,
     };
     static const char* err_to_str(ErrorCode e);
 
@@ -97,6 +98,12 @@ public:
     template<class V>
     using ExpectedValue = std::expected<RetVal<V>, Err>;
 
+    class RxBlock: public Channel::RxBlock
+    {
+    public:
+        RxBlock(LD2412 &c):Channel::RxBlock(c, c.m_recvBuf, sizeof(c.m_recvBuf)){}
+    private:
+    };
 private:
 #pragma pack(push,1)
     struct BaseConfigData
@@ -151,8 +158,9 @@ public:
     struct ConfigBlock
     {
         LD2412 &d;
+        RxBlock rxBlock;
 
-        ConfigBlock(LD2412 &d): d(d), m_Configuration(d.m_Configuration) {}
+        ConfigBlock(LD2412 &d): d(d), rxBlock(d), m_Configuration(d.m_Configuration) {}
         ConfigBlock(ConfigBlock const&) = delete;
         ConfigBlock(ConfigBlock &&) = delete;
         ConfigBlock& operator=(ConfigBlock const &) = delete;
@@ -242,7 +250,10 @@ public:
     PresenceResult GetPresence() const { return m_Presence; }
     const Engeneering& GetEngeneeringData() const { return m_Engeneering; }
 
+    void StartContinuousReading();
+    void StopContinuousReading();
     ExpectedResult TryReadFrame(int attempts = 3, bool flush = false, Drain drain = Drain::No);
+    ExpectedResult TryReadSingleFrame(int attempts = 3, bool flush = false, Drain drain = Drain::No);
 
     ExpectedResult RunDynamicBackgroundAnalysis();
     bool IsDynamicBackgroundAnalysisRunning();
@@ -372,7 +383,7 @@ private:
     {\
         if (retry) \
         {\
-            FMT_PRINT("Failed on " #f);\
+            printk("Failed on " #f "\n");\
             continue;\
         }\
         return to_cmd_result(std::move(r), location, ec);\
@@ -403,13 +414,13 @@ private:
     ExpectedResult RecvFrameV2(T&&... args)
     {
         constexpr const size_t arg_size = (uart::primitives::uart_sizeof<std::remove_cvref_t<T>>() + ...);
-        if (m_dbg) m_Dbg = true;
-        ScopeExit resetDbg = [&]{ if (m_dbg) m_Dbg = false; };
+        //if (m_dbg) m_Dbg = true;
+        //ScopeExit resetDbg = [&]{ if (m_dbg) m_Dbg = false; };
         TRY_UART_COMM(uart::primitives::match_bytes(*this, kFrameHeader), "RecvFrameV2", ErrorCode::RecvFrame_Malformed);
-        if (m_dbg) FMT_PRINT("RecvFrameV2: matched header\n"); 
+        if (m_dbg) printk("RecvFrameV2: matched header\n"); 
         uint16_t len;
         TRY_UART_COMM(uart::primitives::read_into(*this, len), "RecvFrameV2", ErrorCode::RecvFrame_Malformed);
-        if (m_dbg) FMT_PRINT("RecvFrameV2: len: {}\n", len);
+        if (m_dbg) printk("RecvFrameV2: len: %d\n", len);
         if (arg_size > len)
             return std::unexpected(Err{{}, "RecvFrameV2 len invalid", ErrorCode::RecvFrame_Malformed}); 
 
@@ -418,7 +429,9 @@ private:
         {
             TRY_UART_COMM(uart::primitives::skip_bytes(*this, len), "RecvFrameV2", ErrorCode::RecvFrame_Malformed);
         }
+        if (m_dbg) printk("RecvFrameV2: mathcing footer\n");
         TRY_UART_COMM(uart::primitives::match_bytes(*this, kFrameFooter), "RecvFrameV2", ErrorCode::RecvFrame_Malformed);
+        if (m_dbg) printk("RecvFrameV2: matched footer\n");
         return std::ref(*this);
     }
 
@@ -431,6 +444,8 @@ private:
         static_assert(sizeof(CmdT) == 2, "must be 2 bytes");
         if (GetDefaultWait() < kDefaultWait)
             SetDefaultWait(kDefaultWait);
+        if (m_dbg)
+            printk("SendCommandV2 %x\n", (int)cmd);
         uint16_t status;
         auto SendFrameExpandArgs = [&]<size_t...idx>(std::index_sequence<idx...>){
             return SendFrameV2(cmd, std::get<idx>(sendArgs)...);
@@ -440,7 +455,7 @@ private:
                 uart::primitives::match_t{uint16_t(cmd | 0x100)}, 
                 status, 
                 uart::primitives::callback_t{[&]()->Channel::ExpectedResult{
-                    if (m_dbg) FMT_PRINT("Recv frame resp. Status {}\n", status);
+                    if (m_dbg) printk("Recv frame resp. Status %d\n", status);
                     if (status != 0)
                         return std::unexpected(::Err{"SendCommandV2 status", status});
                     return std::ref((Channel&)*this);
@@ -453,15 +468,16 @@ private:
         {
             if (retry != kMaxRetry)
             {
-                /*if (m_dbg)*/ FMT_PRINT("Sending command {:x} retry: {}\n", uint16_t(cmd), (kMaxRetry - retry));
+                /*if (m_dbg)*/ printk("Sending command %x retry: %d\n", uint16_t(cmd), (kMaxRetry - retry));
                 k_msleep(kDefaultWait); 
+                (void)Channel::Drain(false).has_value();
             }
             //TRY_UART_COMM_CMD_WITH_RETRY(Flush(), "SendCommandV2", ErrorCode::SendCommand_Failed);
             //if (m_dbg) FMT_PRINT("Sent cmd {}\n", uint16_t(cmd));
             TRY_UART_COMM_CMD_WITH_RETRY(SendFrameExpandArgs(std::make_index_sequence<sizeof...(ToSend)>()), "SendCommandV2", ErrorCode::SendCommand_Failed);
-            if (m_dbg) FMT_PRINT("Wait all\n");
+            if (m_dbg) printk("Wait all\n");
             TRY_UART_COMM_CMD_WITH_RETRY(WaitAllSent(), "SendCommandV2", ErrorCode::SendCommand_Failed);
-            if (m_dbg) FMT_PRINT("Receiving {} args\n", sizeof...(ToRecv));
+            if (m_dbg) printk("Receiving %d args\n", sizeof...(ToRecv));
             TRY_UART_COMM_CMD_WITH_RETRY(RecvFrameExpandArgs(std::make_index_sequence<sizeof...(ToRecv)>()), "SendCommandV2", ErrorCode::SendCommand_Failed);
             break;
         }
@@ -496,12 +512,15 @@ private:
     }m_DistanceResolution;
 
     bool m_DynamicBackgroundAnalysis = false;
+    bool m_ContinuousRead = false;
+
+    uint8_t m_recvBuf[128];
 public:
     struct DbgNow
     {
-        DbgNow(LD2412 *pC): m_Dbg(pC->m_dbg), m_PrevDbg(pC->m_dbg) { m_Dbg = true; }
+        DbgNow(LD2412 *pC): m_Dbg(pC->m_dbg), m_PrevDbg(pC->m_dbg) { printk("Dbg start\n"); m_Dbg = true; }
         ~DbgNow() { 
-            printf("\n");
+            printk("Dbg end\n");
             m_Dbg = m_PrevDbg; 
         }
 

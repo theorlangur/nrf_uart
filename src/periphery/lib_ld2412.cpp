@@ -31,6 +31,7 @@ const char* LD2412::err_to_str(ErrorCode e)
         case ErrorCode::RestartFailed: return "RestartFailed";
         case ErrorCode::FactoryResetFailed: return "FactoryResetFailed";
         case ErrorCode::BTFailed: return "BTFailed";
+        case ErrorCode::WrongState: return "WrongState";
     }
     return "unknown";
 }
@@ -50,6 +51,9 @@ LD2412::ExpectedResult LD2412::Init()
 
 LD2412::ExpectedResult LD2412::ReloadConfig()
 {
+    //DbgNow dbg(this);
+    //Channel::m_Dbg = true;
+    RxBlock _RxBlock(*this);
     TRY_UART_COMM(OpenCommandMode(), "ReloadConfig", ErrorCode::SendCommand_Failed);
     TRY_UART_COMM(UpdateVersion(), "ReloadConfig", ErrorCode::SendCommand_Failed);
     TRY_UART_COMM(SendCommandV2(Cmd::ReadBaseParams, to_send(), to_recv(m_Configuration.m_Base)), "ReloadConfig", ErrorCode::SendCommand_Failed);
@@ -127,6 +131,7 @@ LD2412::ExpectedOpenCmdModeResult LD2412::OpenCommandMode()
     if (auto rs = SendCommandV2(Cmd::OpenCmd, to_send(protocol_version), to_recv(r.protocol_version, r.buffer_size)); !rs)
         return std::unexpected(rs.error());
 
+    (void)Channel::Drain(false).has_value();
     return OpenCmdModeRetVal{std::ref(*this), r};
 }
 
@@ -178,8 +183,28 @@ LD2412::ExpectedResult LD2412::ReadFrame()
     return std::ref(*this);
 }
 
+LD2412::ExpectedResult LD2412::TryReadSingleFrame(int attempts, bool flush, Drain drain)
+{
+    RxBlock _RxBlock(*this);
+    return TryReadFrame(attempts, flush, drain);
+}
+
+void LD2412::StartContinuousReading()
+{
+    m_ContinuousRead = true;
+    AllowReadUpTo(m_recvBuf, sizeof(m_recvBuf));
+}
+
+void LD2412::StopContinuousReading()
+{
+    StopReading();
+    m_ContinuousRead = false;
+}
+
 LD2412::ExpectedResult LD2412::TryReadFrame(int attempts, bool flush, Drain drain)
 {
+    //DbgNow dbg(this);
+    //Channel::m_Dbg = true;
     if (drain != Drain::No)
     {
         //printf("TryReadFRame: draining first\n");
@@ -203,7 +228,7 @@ LD2412::ExpectedResult LD2412::TryReadFrame(int attempts, bool flush, Drain drai
         }
     }else
     {
-        //FMT_PRINT("TryReadFrame: no drain\n");
+        //FMT_PRINTLN("TryReadFrame: no drain");
         SetDefaultWait(uart::duration_ms_t(kDefaultWait));
         auto ec = (m_Mode == SystemMode::Energy) ? ErrorCode::EnergyData_Failure : ErrorCode::SimpleData_Failure;
         //if (flush)
@@ -334,6 +359,9 @@ LD2412::ExpectedResult LD2412::ConfigBlock::EndChange()
     //Channel::DbgNow _dbg(&d);
     //DbgNow _dbg2(&d);
     ScopeExit clearChanges = [&]{ m_Changes = 0; };
+    if (d.m_ContinuousRead)
+        return std::unexpected(Err{{}, "ConfigBlock::EndChange", ErrorCode::WrongState});
+
     TRY_UART_COMM(d.OpenCommandMode(), "LD2412::ConfigBlock::EndChange", ErrorCode::SendCommand_Failed);
     if (m_Changed.Mode)
     {
