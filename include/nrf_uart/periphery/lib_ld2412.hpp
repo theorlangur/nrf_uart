@@ -325,160 +325,22 @@ private:
     constexpr static uint8_t kDataFrameFooter[] = {0xf8, 0xf7, 0xf6, 0xf5};
 
     template<class E>
-    static ExpectedResult to_result(E &&e, const char* pLocation, ErrorCode ec)
-    {
-        using PureE = std::remove_cvref_t<E>;
-        if constexpr(is_expected_type_v<PureE>)
-        {
-            if constexpr (std::is_same_v<PureE, ExpectedResult>)
-                return std::move(e);
-            else
-                return to_result(e.error(), pLocation, ec);
-        }else if constexpr (std::is_same_v<PureE,::Err>)
-            return ExpectedResult(std::unexpected(Err{e, pLocation, ec}));
-        else if constexpr (std::is_same_v<PureE,Err>)
-            return ExpectedResult(std::unexpected(e));
-        else if constexpr (std::is_same_v<PureE,CmdErr>)
-            return ExpectedResult(std::unexpected(e.e));
-        else
-        {
-            static_assert(std::is_same_v<PureE,Err>, "Don't know how to convert passed type");
-            return ExpectedResult(std::unexpected(Err{}));
-        }
-    }
+    static ExpectedResult to_result(E &&e, const char* pLocation, ErrorCode ec);
 
     template<class E>
-    static ExpectedGenericCmdResult to_cmd_result(E &&e, const char* pLocation, ErrorCode ec)
-    {
-        using PureE = std::remove_cvref_t<E>;
-        if constexpr(is_expected_type_v<PureE>)
-        {
-            if constexpr (std::is_same_v<PureE, ExpectedGenericCmdResult>)
-                return std::move(e);
-            else
-                return to_cmd_result(e.error(), pLocation, ec);
-        }else if constexpr (std::is_same_v<PureE,::Err>)
-            return ExpectedGenericCmdResult(std::unexpected(CmdErr{Err{e, pLocation, ec}, 0}));
-        else if constexpr (std::is_same_v<PureE,Err>)
-            return ExpectedGenericCmdResult(std::unexpected(CmdErr{e, 0}));
-        else if constexpr (std::is_same_v<PureE,CmdErr>)
-            return ExpectedGenericCmdResult(std::unexpected(e));
-        else
-        {
-            static_assert(std::is_same_v<PureE,Err>, "Don't know how to convert passed type");
-            return ExpectedGenericCmdResult(std::unexpected(CmdErr{}));
-        }
-    }
-
-#define LD2412_TRY_UART_COMM(f, location, ec) \
-    if (auto r = f; !r) \
-        return to_result(std::move(r), location, ec)
-
-#define LD2412_TRY_UART_COMM_CMD(f, location, ec) \
-    if (auto r = f; !r) \
-        return to_cmd_result(std::move(r), location, ec)
-
-#define LD2412_TRY_UART_COMM_CMD_WITH_RETRY(f, location, ec) \
-    if (auto r = f; !r) \
-    {\
-        if (retry) \
-        {\
-            printk("Failed on " #f "\n");\
-            continue;\
-        }\
-        return to_cmd_result(std::move(r), location, ec);\
-    }
+    static ExpectedGenericCmdResult to_cmd_result(E &&e, const char* pLocation, ErrorCode ec);
 
     template<class...T>
-    ExpectedResult SendFrameV2(T&&... args)
-    {
-        using namespace uart::primitives;
-        //1. header
-        LD2412_TRY_UART_COMM(Send(kFrameHeader, sizeof(kFrameHeader)), "SendFrameV2", ErrorCode::SendFrame);
-
-        //2. length
-        {
-            uint16_t len = (sizeof(args) + ...);
-            LD2412_TRY_UART_COMM(Send((uint8_t const*)&len, sizeof(len)), "SendFrameV2", ErrorCode::SendFrame);
-        }
-        //3. data
-        LD2412_TRY_UART_COMM(uart::primitives::write_any(*this, std::forward<T>(args)...), "SendFrameV2", ErrorCode::SendFrame);
-
-        //4. footer
-        LD2412_TRY_UART_COMM(Send(kFrameFooter, sizeof(kFrameFooter)), "SendFrameV2", ErrorCode::SendFrame);
-
-        return std::ref(*this);
-    }
+    ExpectedResult SendFrameV2(T&&... args);
 
     template<class...T>
-    ExpectedResult RecvFrameV2(T&&... args)
-    {
-        constexpr const size_t arg_size = (uart::primitives::uart_sizeof<std::remove_cvref_t<T>>() + ...);
-        LD2412_TRY_UART_COMM(uart::primitives::match_bytes(*this, kFrameHeader), "RecvFrameV2", ErrorCode::RecvFrame_Malformed);
-        if (m_dbg) printk("RecvFrameV2: matched header\n"); 
-        uint16_t len;
-        LD2412_TRY_UART_COMM(uart::primitives::read_into(*this, len), "RecvFrameV2", ErrorCode::RecvFrame_Malformed);
-        if (m_dbg) printk("RecvFrameV2: len: %d\n", len);
-        if (arg_size > len)
-            return std::unexpected(Err{{}, "RecvFrameV2 len invalid", ErrorCode::RecvFrame_Malformed}); 
-
-        LD2412_TRY_UART_COMM(uart::primitives::read_any_limited(*this, len, std::forward<T>(args)...), "RecvFrameV2", ErrorCode::RecvFrame_Malformed);
-        if (len)
-        {
-            LD2412_TRY_UART_COMM(uart::primitives::skip_bytes(*this, len), "RecvFrameV2", ErrorCode::RecvFrame_Malformed);
-        }
-        if (m_dbg) printk("RecvFrameV2: mathcing footer\n");
-        LD2412_TRY_UART_COMM(uart::primitives::match_bytes(*this, kFrameFooter), "RecvFrameV2", ErrorCode::RecvFrame_Malformed);
-        if (m_dbg) printk("RecvFrameV2: matched footer\n");
-        return std::ref(*this);
-    }
+    ExpectedResult RecvFrameV2(T&&... args);
 
     template<class... ToSend> static auto to_send(ToSend&&...args) { return std::forward_as_tuple(std::forward<ToSend>(args)...); }
     template<class... ToRecv> static auto to_recv(ToRecv&&...args) { return std::forward_as_tuple(std::forward<ToRecv>(args)...); }
 
     template<class CmdT, class... ToSend, class... ToRecv>
-    ExpectedGenericCmdResult SendCommandV2(CmdT cmd, std::tuple<ToSend...> sendArgs, std::tuple<ToRecv...> recvArgs)
-    {
-        static_assert(sizeof(CmdT) == 2, "must be 2 bytes");
-        if (GetDefaultWait() < kDefaultWait)
-            SetDefaultWait(kDefaultWait);
-        if (m_dbg)
-            printk("SendCommandV2 %x\n", (int)cmd);
-        uint16_t status;
-        auto SendFrameExpandArgs = [&]<size_t...idx>(std::index_sequence<idx...>){
-            return SendFrameV2(cmd, std::get<idx>(sendArgs)...);
-        };
-        auto RecvFrameExpandArgs = [&]<size_t...idx>(std::index_sequence<idx...>){ 
-            return RecvFrameV2(
-                uart::primitives::match_t{uint16_t(cmd | 0x100)}, 
-                status, 
-                uart::primitives::callback_t{[&]()->Channel::ExpectedResult{
-                    if (m_dbg) printk("Recv frame resp. Status %d\n", status);
-                    if (status != 0)
-                        return std::unexpected(::Err{"SendCommandV2 status", status});
-                    return std::ref((Channel&)*this);
-                }},
-                std::get<idx>(recvArgs)...);
-        };
-
-        constexpr int kMaxRetry = 1;
-        for(int retry=kMaxRetry; retry >= 0; --retry)
-        {
-            if (retry != kMaxRetry)
-            {
-                if (m_dbg) printk("Sending command %x retry: %d\n", uint16_t(cmd), (kMaxRetry - retry));
-                k_msleep(kDefaultWait); 
-                (void)Channel::Drain(false).has_value();
-            }
-            LD2412_TRY_UART_COMM_CMD_WITH_RETRY(SendFrameExpandArgs(std::make_index_sequence<sizeof...(ToSend)>()), "SendCommandV2", ErrorCode::SendCommand_Failed);
-            if (m_dbg) printk("Wait all\n");
-            LD2412_TRY_UART_COMM_CMD_WITH_RETRY(WaitAllSent(), "SendCommandV2", ErrorCode::SendCommand_Failed);
-            if (m_dbg) printk("Receiving %d args\n", sizeof...(ToRecv));
-            LD2412_TRY_UART_COMM_CMD_WITH_RETRY(RecvFrameExpandArgs(std::make_index_sequence<sizeof...(ToRecv)>()), "SendCommandV2", ErrorCode::SendCommand_Failed);
-            break;
-        }
-        return std::ref(*this);
-    }
+    ExpectedGenericCmdResult SendCommandV2(CmdT cmd, std::tuple<ToSend...> sendArgs, std::tuple<ToRecv...> recvArgs);
 
     ExpectedOpenCmdModeResult OpenCommandMode();
     ExpectedGenericCmdResult CloseCommandMode();
@@ -493,7 +355,6 @@ private:
     //data
     Version m_Version;
     SystemMode m_Mode = SystemMode::Simple;
-    //OpenCmdModeResponse m_ProtoInfo{0, 0};
     Configuration m_Configuration;
 
     //the data will be read into as is
