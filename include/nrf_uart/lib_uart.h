@@ -80,7 +80,7 @@ namespace uart
         //void SetEventCallback(EventCallback cb) { m_EventCallback = std::move(cb); }
         //bool HasEventCallback() const { return (bool)m_EventCallback; }
 
-        bool m_Dbg;
+        bool m_Dbg = false;
     private:
         static void uart_async_callback(const struct device *dev, uart_event *evt, void *user_data);
         int uart_send();
