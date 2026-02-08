@@ -209,7 +209,7 @@ namespace uart
 	CALL_WITH_EXPECTED("Channel::Send", k_sem_take(&m_tx_sem, Z_TIMEOUT_MS(m_DefaultWait)));
 	if (m_Dbg)
 	{
-	    FMT_PRINTLN("Channel::Send: {}", std::span<const char>{(const char*)pData, len});
+	    FMT_PRINTLN("Channel::Send: {}", std::span<const uint8_t>{(const uint8_t*)pData, len});
 	}
 	m_pSendBuf = pData;
 	m_SendLen = len;
@@ -220,13 +220,23 @@ namespace uart
     void Channel::AllowReadUpTo(uint8_t *pData, size_t len)
     {
 	if (m_Dbg)
+	{
 	    FMT_PRINTLN("Channel::AllowReadUpTo: {}", len);
+	}
 	m_pInternalRecvBuf = pData;
         m_InternalRecvBufLen = len;
         m_InternalRecvBufNextWrite = 0;
         m_InternalRecvBufNextRead = 0;
 	m_UARTAsyncBufNext = 0;
-	m_rx_enable_request = true;
+	if (!m_rx_enable_request)
+	{
+	    //m_rx_enable_request = true;
+	    auto r = uart_rx_enable(m_pUART, m_UARTAsyncBufs[0], kUARTAsyncBufSize, m_UARTRxTimeoutUS);
+	    if (m_Dbg && (r != 0))
+	    {
+		FMT_PRINTLN("uart_rx_enable: {}", r);
+	    }
+	}
     }
 
     void Channel::StopReading(bool dbg)
@@ -236,7 +246,7 @@ namespace uart
 
 	if (r < 0)
 	{
-	    FMT_PRINTLN("Channel::StopReading: could not disable RX: {}", r);
+	    printk("Channel::StopReading: could not disable RX: %d\n", r);
 	}else
 	{
 	    if (m_pInternalRecvBuf && m_InternalRecvBufNextWrite)
@@ -248,7 +258,7 @@ namespace uart
 		else if (m_InternalRecvBufNextWrite != m_InternalRecvBufNextRead)
 		{
 		    if (m_Dbg)
-			FMT_PRINTLN("Channel::StopReading: unread data in buf: {}", std::string_view{(const char*)m_pInternalRecvBuf + m_InternalRecvBufNextRead, (size_t)(m_InternalRecvBufNextWrite - m_InternalRecvBufNextRead)});
+			FMT_PRINTLN("Channel::StopReading: unread data in buf: {}", std::span<const uint8_t>{m_pInternalRecvBuf + m_InternalRecvBufNextRead, (size_t)(m_InternalRecvBufNextWrite - m_InternalRecvBufNextRead)});
 		}
 	    }
 	}
@@ -267,7 +277,12 @@ namespace uart
 	    int avail = m_InternalRecvBufLen - m_InternalRecvBufNextRead;
 	    int n = std::min(avail, (int)len);
 	    memcpy(pBuf, m_pInternalRecvBuf + m_InternalRecvBufNextRead, n);
-	    if (m_Dbg) for(int i = 0; i < n; ++i) printk("%c", *(m_pInternalRecvBuf + m_InternalRecvBufNextRead + i));
+	    if (m_Dbg) 
+	    {
+		printk("RI{%d - %d}: ", len, n);
+		for(int i = 0; i < n; ++i) printk("%02x", *(m_pInternalRecvBuf + m_InternalRecvBufNextRead + i));
+		printk("\n");
+	    }
 	    m_InternalRecvBufNextRead = (m_InternalRecvBufNextRead + n) % m_InternalRecvBufLen;
 	    read_bytes += n;
 	    if (read_bytes == len)
@@ -278,7 +293,12 @@ namespace uart
 	int left = len - read_bytes;
 	int n = std::min(avail, left);
 	memcpy(pBuf + read_bytes, m_pInternalRecvBuf + m_InternalRecvBufNextRead, n);
-	if (m_Dbg) for(int i = 0; i < n; ++i) printk("%c", *(m_pInternalRecvBuf + m_InternalRecvBufNextRead + i));
+	if (m_Dbg) 
+	{
+	    printk("RI{%d - %d}: ", len, n);
+	    for(int i = 0; i < n; ++i) printk("%02x", *(m_pInternalRecvBuf + m_InternalRecvBufNextRead + i));
+	    printk("\n");
+	}
 	m_InternalRecvBufNextRead += n;
 	read_bytes += n;
 	return read_bytes;
@@ -318,7 +338,8 @@ namespace uart
 
 	    if (m_UARTAsyncBufNext == -1)
 	    {
-		printk("Read: restarting recv\r\n");
+		if (m_Dbg)
+		    printk("Read: restarting recv\r\n");
 		m_UARTAsyncBufNext = 0;
 		uart_rx_enable(m_pUART, m_UARTAsyncBufs[0], kUARTAsyncBufSize, m_UARTRxTimeoutUS);
 	    }
@@ -331,7 +352,8 @@ namespace uart
 		//CALL_WITH_EXPECTED("Channel::Read(internal)", k_sem_take(&m_rx_sem, Z_TIMEOUT_MS(wait)));
 		if (auto err = k_sem_take(&m_rx_sem, Z_TIMEOUT_MS(wait)); err != 0)
 		{
-		    printk("Read failed. write pos: %d; read pos: %d; (buf idx=%d; state=%d)\r\n", m_InternalRecvBufNextWrite, m_InternalRecvBufNextRead, m_UARTAsyncBufNext, m_rx_state);
+		    if (m_Dbg)
+			printk("Read failed. write pos: %d; read pos: %d; (buf idx=%d; state=%d)\r\n", m_InternalRecvBufNextWrite, m_InternalRecvBufNextRead, m_UARTAsyncBufNext, m_rx_state);
 		    //FMT_PRINTLN("Read failed. write pos: {}; read pos: {}; (buf idx={})", m_InternalRecvBufNextWrite, m_InternalRecvBufNextRead, m_UARTAsyncBufNext);
 		    return std::unexpected(Err{"Channel::Read(internal)", err});
 		}
@@ -347,7 +369,13 @@ namespace uart
     Channel::ExpectedResult Channel::Drain(bool stopAtEnd)
     {
 	uint8_t buf[8];
-	while(Read(buf, sizeof(buf), 0));
+	if (m_Dbg) printk("Draining...\n");
+	while(true)
+	{
+	    auto r = Read(buf, sizeof(buf), 0);
+	    if (!r || r.value().v == 0)
+		break;
+	}
 
 	if (stopAtEnd)
 	{

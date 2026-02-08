@@ -2,6 +2,8 @@
 #define LIB_UART_H_
 
 #include <zephyr/kernel.h>
+#define FORCE_FMT
+#define PRINTF_FUNC(...) printk(__VA_ARGS__)
 #include "lib_ret_err.h"
 #include <lib_formatter.hpp>
 #include <expected>
