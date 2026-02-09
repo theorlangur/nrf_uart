@@ -330,17 +330,17 @@ private:
     template<class E>
     static ExpectedGenericCmdResult to_cmd_result(E &&e, const char* pLocation, ErrorCode ec);
 
-    template<class...T>
-    ExpectedResult SendFrameV2(T&&... args);
-
-    template<class...T>
-    ExpectedResult RecvFrameV2(T&&... args);
-
     template<class... ToSend> static auto to_send(ToSend&&...args) { return std::forward_as_tuple(std::forward<ToSend>(args)...); }
     template<class... ToRecv> static auto to_recv(ToRecv&&...args) { return std::forward_as_tuple(std::forward<ToRecv>(args)...); }
 
+    template<class...T>
+    ExpectedResult SendFrame(T&&... args);
+
+    template<class...T>
+    ExpectedResult RecvFrame(T&&... args);
+
     template<class CmdT, class... ToSend, class... ToRecv>
-    ExpectedGenericCmdResult SendCommandV2(CmdT cmd, std::tuple<ToSend...> sendArgs, std::tuple<ToRecv...> recvArgs);
+    ExpectedGenericCmdResult SendCommand(CmdT cmd, std::tuple<ToSend...> sendArgs, std::tuple<ToRecv...> recvArgs);
 
     ExpectedOpenCmdModeResult OpenCommandMode();
     ExpectedGenericCmdResult CloseCommandMode();
@@ -352,6 +352,7 @@ private:
     ExpectedResult QueryDynamicBackgroundAnalysisRunState();
 
     ExpectedResult ReadFrame();
+
     //data
     Version m_Version;
     SystemMode m_Mode = SystemMode::Simple;
