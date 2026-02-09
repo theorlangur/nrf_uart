@@ -83,24 +83,10 @@ namespace uart
 	    case UART_TX_ABORTED:
 		break;
 	    case UART_TX_DONE:
-	    {
 		k_sem_give(&pC->m_tx_sem);
-		if (pC->m_rx_enable_request)
-		{
-		    pC->m_rx_enable_request = false;
-		    uart_rx_enable(pC->m_pUART, pC->m_UARTAsyncBufs[0], kUARTAsyncBufSize, pC->m_UARTRxTimeoutUS);
-		}
-	    }
 	    break;
 	    case UART_RX_BUF_REQUEST:
 	    {
-		if (pC->m_rx_disable_request)
-		{
-		    pC->m_rx_disable_request = false;
-		    uart_rx_disable(dev);
-		    break;
-		}
-
 		if (pC->m_UARTAsyncBufNext != -1)
 		{
 		    pC->m_rx_state = true;
@@ -115,11 +101,6 @@ namespace uart
 	    }
 	    break;
 	    case UART_RX_BUF_RELEASED:
-		if (pC->m_rx_disable_request)
-		{
-		    pC->m_rx_disable_request = false;
-		    uart_rx_disable(dev);
-		}
 		break;
 	    case UART_RX_DISABLED:
 		pC->m_rx_state = false;
@@ -171,7 +152,7 @@ namespace uart
 		}
 		break;
 	    case UART_RX_STOPPED:
-		if (!pC->m_rx_disable_request && pC->m_pInternalRecvBuf && pC->m_UARTAsyncBufNext != -1)
+		if (pC->m_pInternalRecvBuf && pC->m_UARTAsyncBufNext != -1)
 		{
 		    pC->m_rx_state = false;
 		    pC->m_UARTAsyncBufNext = 0;
@@ -223,26 +204,32 @@ namespace uart
 	{
 	    FMT_PRINTLN("Channel::AllowReadUpTo: {}", len);
 	}
+	if (m_rx_state)
+	    StopReading();
+
 	m_pInternalRecvBuf = pData;
         m_InternalRecvBufLen = len;
         m_InternalRecvBufNextWrite = 0;
         m_InternalRecvBufNextRead = 0;
 	m_UARTAsyncBufNext = 0;
-	if (!m_rx_enable_request)
+	auto r = uart_rx_enable(m_pUART, m_UARTAsyncBufs[0], kUARTAsyncBufSize, m_UARTRxTimeoutUS);
+	if (m_Dbg && (r != 0))
 	{
-	    //m_rx_enable_request = true;
-	    auto r = uart_rx_enable(m_pUART, m_UARTAsyncBufs[0], kUARTAsyncBufSize, m_UARTRxTimeoutUS);
-	    if (m_Dbg && (r != 0))
-	    {
-		FMT_PRINTLN("uart_rx_enable: {}", r);
-	    }
+	    FMT_PRINTLN("uart_rx_enable: {}", r);
 	}
     }
 
     void Channel::StopReading(bool dbg)
     {
-	m_rx_disable_request = true;
-	int r = k_sem_take(&m_rx_ctrl, Z_TIMEOUT_MS(m_DefaultWait));
+	k_sem_reset(&m_rx_ctrl);
+	int r = uart_rx_disable(m_pUART);
+	if ((r < 0) && m_Dbg)
+	{
+	    printk("rx disable call failed with %d\n", r);
+	}
+	r = k_sem_take(&m_rx_ctrl, Z_TIMEOUT_MS(10/*m_DefaultWait*/));
+	if (!m_rx_state)
+	    r = 0;
 
 	if (r < 0)
 	{

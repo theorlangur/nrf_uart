@@ -95,8 +95,6 @@ namespace uart
         struct k_sem m_rx_sem;
         struct k_sem m_rx_ctrl;
         duration_ms_t m_DefaultWait{0};
-        bool m_rx_disable_request = false;
-        bool m_rx_enable_request = false;
 
         bool m_rx_state = false;
 
