@@ -61,6 +61,10 @@ public:
         Move,
         Still,
         MoveAndStill,
+        //TODO: implement
+        BackgroundAnalysisRunning,
+        BackgroundAnalysisOk,
+        BackgroundAnalysisFailed,
     };
 
     enum class DistanceRes: uint8_t
@@ -68,6 +72,14 @@ public:
         _0_75 = 0,
         _0_50 = 1,
         _0_20 = 3,
+    };
+
+    //TODO: implement
+    enum class LightSensitivity: uint8_t
+    {
+        Off = 0,
+        DetectWhenLessThan = 1,
+        DetectWhenBiggerThan = 2,
     };
 
     enum class Drain
@@ -267,9 +279,6 @@ private:
         EnterEngMode = 0x0062,
         LeaveEngMode = 0x0063,
 
-        //QueryDistanceResolution = 0x0011,
-        //SetDistanceResolution = 0x0001,
-
         SetMoveSensitivity = 0x0003,
         GetMoveSensitivity = 0x0013,
 
@@ -278,6 +287,10 @@ private:
 
         RunDynamicBackgroundAnalysis = 0x000B,
         QuearyDynamicBackgroundAnalysis = 0x001B,
+
+        //TODO: implement
+        SetLightSensitivity = 0x000c,
+        GetLightSensitivity = 0x001c,
 
         FactoryReset = 0x00a2,
         Restart = 0x00a3,
