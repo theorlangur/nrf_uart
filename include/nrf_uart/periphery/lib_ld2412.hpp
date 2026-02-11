@@ -61,7 +61,6 @@ public:
         Move,
         Still,
         MoveAndStill,
-        //TODO: implement
         BackgroundAnalysisRunning,
         BackgroundAnalysisOk,
         BackgroundAnalysisFailed,
@@ -120,16 +119,22 @@ private:
 #pragma pack(push,1)
     struct BaseConfigData
     {
-        uint8_t m_MinDistanceGate;
-        uint8_t m_MaxDistanceGate;
-        uint16_t m_Duration;//seconds
-        uint8_t m_OutputPinPolarity;//0 - high on presence; 1 - low on presence
+        uint8_t m_MinDistanceGate = 0;
+        uint8_t m_MaxDistanceGate = 13;
+        uint16_t m_Duration = 0;//seconds
+        uint8_t m_OutputPinPolarity = 0;//0 - high on presence; 1 - low on presence
+    };
+    struct LightSensitivityConfig
+    {
+        LightSensitivity m_Mode = LightSensitivity::Off;
+        uint8_t m_ThresholdLevel = 0;
     };
     struct Configuration
     {
         BaseConfigData m_Base;
-        uint8_t m_MoveThreshold[14];
-        uint8_t m_StillThreshold[14];
+        uint8_t m_MoveThreshold[14] = {0};
+        uint8_t m_StillThreshold[14] = {0};
+        LightSensitivityConfig m_LightSense;
     };
 #pragma pack(pop)
 public:
@@ -195,6 +200,8 @@ public:
         ConfigBlock& SetMoveThreshold(uint8_t gate, uint8_t energy);
         ConfigBlock& SetStillThreshold(uint8_t gate, uint8_t energy);
 
+        ConfigBlock& SetLightSensitivity(LightSensitivity senseMode, uint8_t lightThreshold);
+
         ExpectedResult EndChange();
     private:
         SystemMode m_NewMode;
@@ -212,7 +219,8 @@ public:
                 uint32_t MoveThreshold    : 1;
                 uint32_t StillThreshold   : 1;
                 uint32_t DistanceRes      : 1;
-                uint32_t Unused           : 24;
+                uint32_t LightSens        : 1;
+                uint32_t Unused           : 23;
             }m_Changed;
             
             struct{
@@ -245,6 +253,9 @@ public:
     bool GetOutPinPolarity() const { return m_Configuration.m_Base.m_OutputPinPolarity; }
     auto GetDistanceRes() const { return m_DistanceResolution.m_Res; }
 
+    auto GetLightSensitivityMode() const { return m_Configuration.m_LightSense.m_Mode; }
+    auto GetLightSensitivityThreshold() const { return m_Configuration.m_LightSense.m_ThresholdLevel; }
+
     ConfigBlock ChangeConfiguration() { return {*this}; }
 
     ExpectedResult UpdateDistanceRes();
@@ -273,6 +284,10 @@ private:
     enum class Cmd: uint16_t
     {
         ReadVer = 0x00a0,
+
+        SetDistanceRes = 0x0001,
+        GetDistanceRes = 0x0011,
+
         WriteBaseParams = 0x0002,
         ReadBaseParams = 0x0012,
 
@@ -288,7 +303,6 @@ private:
         RunDynamicBackgroundAnalysis = 0x000B,
         QuearyDynamicBackgroundAnalysis = 0x001B,
 
-        //TODO: implement
         SetLightSensitivity = 0x000c,
         GetLightSensitivity = 0x001c,
 
@@ -300,11 +314,6 @@ private:
 
         OpenCmd = 0x00ff,
         CloseCmd = 0x00fe,
-
-        //SetDistanceRes = 0x00aa,
-        //GetDistanceRes = 0x00ab,
-        SetDistanceRes = 0x0001,
-        GetDistanceRes = 0x0011,
     };
 
     friend Cmd operator|(Cmd r, uint16_t v)
@@ -434,6 +443,9 @@ struct tools::formatter_t<LD2412::TargetState>
             case LD2412::TargetState::Still: pStr = "Still"; break;
             case LD2412::TargetState::Move: pStr = "Move"; break;
             case LD2412::TargetState::MoveAndStill: pStr = "MoveAndStill"; break;
+            case LD2412::TargetState::BackgroundAnalysisRunning: pStr = "BackCheckRunning"; break;
+            case LD2412::TargetState::BackgroundAnalysisOk: pStr = "BackCheckOk"; break;
+            case LD2412::TargetState::BackgroundAnalysisFailed: pStr = "BackCheckFailed"; break;
         }
         return tools::format_to(std::forward<Dest>(dst), "{}", pStr);
     }

@@ -219,6 +219,7 @@ LD2412::ExpectedResult LD2412::ReloadConfig()
     LD2412_TRY_UART_COMM(SendCommand(Cmd::GetStillSensitivity, to_send(), to_recv(m_Configuration.m_StillThreshold)), "ReloadConfig", ErrorCode::SendCommand_Failed);
     LD2412_TRY_UART_COMM(SendCommand(Cmd::GetMAC, to_send(uint16_t(0x0001)), to_recv(m_BluetoothMAC)), "ReloadConfig", ErrorCode::SendCommand_Failed);
     LD2412_TRY_UART_COMM(SendCommand(Cmd::GetDistanceRes, to_send(), to_recv(m_DistanceResolution)), "UpdateDistanceRes", ErrorCode::SendCommand_Failed);
+    LD2412_TRY_UART_COMM(SendCommand(Cmd::GetLightSensitivity, to_send(), to_recv(m_Configuration.m_LightSense)), "ReloadConfig: LightSense", ErrorCode::SendCommand_Failed);
     LD2412_TRY_UART_COMM(CloseCommandMode(), "ReloadConfig", ErrorCode::SendCommand_Failed);
     return std::ref(*this);
 }
@@ -508,6 +509,14 @@ LD2412::ConfigBlock& LD2412::ConfigBlock::SetStillThreshold(uint8_t gate, uint8_
     return *this;
 }
 
+LD2412::ConfigBlock& LD2412::ConfigBlock::SetLightSensitivity(LightSensitivity senseMode, uint8_t lightThreshold)
+{
+    m_Changed.LightSens = true;
+    m_Configuration.m_LightSense.m_Mode = senseMode;
+    m_Configuration.m_LightSense.m_ThresholdLevel = lightThreshold;
+    return *this;
+}
+
 LD2412::ExpectedResult LD2412::ConfigBlock::EndChange()
 {
     if (!m_Changes)
@@ -541,6 +550,11 @@ LD2412::ExpectedResult LD2412::ConfigBlock::EndChange()
     {
         std::ranges::copy(m_Configuration.m_StillThreshold, d.m_Configuration.m_StillThreshold);
         LD2412_TRY_UART_COMM(d.SendCommand(Cmd::SetStillSensitivity ,to_send(d.m_Configuration.m_StillThreshold) ,to_recv()), "LD2412::ConfigBlock::EndChange", ErrorCode::SendCommand_Failed);
+    }
+    if (m_Changed.LightSens)
+    {
+        d.m_Configuration.m_LightSense = m_Configuration.m_LightSense;
+        LD2412_TRY_UART_COMM(d.SendCommand(Cmd::SetLightSensitivity ,to_send(d.m_Configuration.m_LightSense) ,to_recv()), "LD2412::ConfigBlock::EndChange", ErrorCode::SendCommand_Failed);
     }
     LD2412_TRY_UART_COMM(d.CloseCommandMode(), "LD2412::ConfigBlock::EndChange", ErrorCode::SendCommand_Failed);
     return std::ref(d);
