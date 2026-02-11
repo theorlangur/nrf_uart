@@ -528,8 +528,8 @@ LD2412::ExpectedResult LD2412::ConfigBlock::EndChange()
     LD2412_TRY_UART_COMM(d.OpenCommandMode(), "LD2412::ConfigBlock::EndChange", ErrorCode::SendCommand_Failed);
     if (m_Changed.Mode)
     {
+        LD2412_TRY_UART_COMM(d.SetSystemModeInternal(m_NewMode), "LD2412::ConfigBlock::EndChange", ErrorCode::SendCommand_Failed);
         d.m_Mode = m_NewMode; 
-        LD2412_TRY_UART_COMM(d.SetSystemModeInternal(d.m_Mode), "LD2412::ConfigBlock::EndChange", ErrorCode::SendCommand_Failed);
     }
     if (m_Changed.DistanceRes)
     {
@@ -538,23 +538,23 @@ LD2412::ExpectedResult LD2412::ConfigBlock::EndChange()
     }
     if (m_Changed.MinDistance || m_Changed.MaxDistance || m_Changed.Timeout || m_Changed.OutPin)
     {
+        LD2412_TRY_UART_COMM(d.SendCommand(Cmd::WriteBaseParams ,to_send(m_Configuration.m_Base) ,to_recv()), "LD2412::ConfigBlock::EndChange", ErrorCode::SendCommand_Failed);
         d.m_Configuration.m_Base = m_Configuration.m_Base;
-        LD2412_TRY_UART_COMM(d.SendCommand(Cmd::WriteBaseParams ,to_send(d.m_Configuration.m_Base) ,to_recv()), "LD2412::ConfigBlock::EndChange", ErrorCode::SendCommand_Failed);
     }
     if (m_Changed.MoveThreshold)
     {
+        LD2412_TRY_UART_COMM(d.SendCommand(Cmd::SetMoveSensitivity ,to_send(m_Configuration.m_MoveThreshold) ,to_recv()), "LD2412::ConfigBlock::EndChange", ErrorCode::SendCommand_Failed);
         std::ranges::copy(m_Configuration.m_MoveThreshold, d.m_Configuration.m_MoveThreshold);
-        LD2412_TRY_UART_COMM(d.SendCommand(Cmd::SetMoveSensitivity ,to_send(d.m_Configuration.m_MoveThreshold) ,to_recv()), "LD2412::ConfigBlock::EndChange", ErrorCode::SendCommand_Failed);
     }
     if (m_Changed.StillThreshold)
     {
+        LD2412_TRY_UART_COMM(d.SendCommand(Cmd::SetStillSensitivity ,to_send(m_Configuration.m_StillThreshold) ,to_recv()), "LD2412::ConfigBlock::EndChange", ErrorCode::SendCommand_Failed);
         std::ranges::copy(m_Configuration.m_StillThreshold, d.m_Configuration.m_StillThreshold);
-        LD2412_TRY_UART_COMM(d.SendCommand(Cmd::SetStillSensitivity ,to_send(d.m_Configuration.m_StillThreshold) ,to_recv()), "LD2412::ConfigBlock::EndChange", ErrorCode::SendCommand_Failed);
     }
     if (m_Changed.LightSens)
     {
+        LD2412_TRY_UART_COMM(d.SendCommand(Cmd::SetLightSensitivity ,to_send(m_Configuration.m_LightSense) ,to_recv()), "LD2412::ConfigBlock::EndChange", ErrorCode::SendCommand_Failed);
         d.m_Configuration.m_LightSense = m_Configuration.m_LightSense;
-        LD2412_TRY_UART_COMM(d.SendCommand(Cmd::SetLightSensitivity ,to_send(d.m_Configuration.m_LightSense) ,to_recv()), "LD2412::ConfigBlock::EndChange", ErrorCode::SendCommand_Failed);
     }
     LD2412_TRY_UART_COMM(d.CloseCommandMode(), "LD2412::ConfigBlock::EndChange", ErrorCode::SendCommand_Failed);
     return std::ref(d);
