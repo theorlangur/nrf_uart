@@ -125,4 +125,15 @@ namespace uart
         //bool m_DbgPrintSend = false;
     };
 }
+
+template<>
+struct ::tools::formatter_t<::Err>
+{
+    template<FormatDestination Dest>
+    static std::expected<size_t, FormatError> format_to(Dest &&dst, std::string_view const& fmtStr, ::Err const& e)
+    {
+        return tools::format_to(std::forward<Dest>(dst), "E<{} at {}>", e.code, e.pLocation);
+    }
+};
+
 #endif
