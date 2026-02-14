@@ -560,12 +560,12 @@ namespace hlk{
         if (m_Changed.MoveThreshold)
         {
             LD2412_TRY_UART_COMM(d.SendCommand(Cmd::SetMoveSensitivity ,to_send(m_Configuration.m_MoveThreshold) ,to_recv()), "LD2412::ConfigBlock::EndChange", ErrorCode::SendCommand_Failed);
-            std::ranges::copy(m_Configuration.m_MoveThreshold, d.m_Configuration.m_MoveThreshold);
+            d.m_Configuration.m_MoveThreshold = m_Configuration.m_MoveThreshold;
         }
         if (m_Changed.StillThreshold)
         {
             LD2412_TRY_UART_COMM(d.SendCommand(Cmd::SetStillSensitivity ,to_send(m_Configuration.m_StillThreshold) ,to_recv()), "LD2412::ConfigBlock::EndChange", ErrorCode::SendCommand_Failed);
-            std::ranges::copy(m_Configuration.m_StillThreshold, d.m_Configuration.m_StillThreshold);
+            d.m_Configuration.m_StillThreshold = m_Configuration.m_StillThreshold;
         }
         if (m_Changed.LightSens)
         {

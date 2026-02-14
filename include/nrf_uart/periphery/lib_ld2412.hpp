@@ -165,8 +165,8 @@ namespace hlk{
         {
             uint8_t m_MaxMoveGate;
             uint8_t m_MaxStillGate;
-            uint8_t m_MoveEnergy[14];
-            uint8_t m_StillEnergy[14];
+            gate_array_t m_MoveEnergy;
+            gate_array_t m_StillEnergy;
             uint8_t m_Light;
             uint8_t m_Dummy;
         };
@@ -260,6 +260,8 @@ namespace hlk{
         auto const& GetAllStillThresholds() const { return m_Configuration.m_StillThreshold; }
         auto GetMeasuredMoveEnergy(uint8_t gate) const { return m_Engeneering.m_MoveEnergy[gate]; }
         auto GetMeasuredStillEnergy(uint8_t gate) const { return m_Engeneering.m_StillEnergy[gate]; }
+        auto const& GetAllMeasuredMoveEnergies() const { return m_Engeneering.m_MoveEnergy; }
+        auto const& GetAllMeasuredStillEnergies() const { return m_Engeneering.m_StillEnergy; }
         auto GetMeasuredLight() const { return m_Engeneering.m_Light; }
 
         auto GetTimeout() const { return m_Configuration.m_Base.m_Duration; }//seconds
