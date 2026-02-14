@@ -16,6 +16,15 @@ namespace hlk{
         static const constexpr uart::duration_ms_t kDefaultWait{350};
         static const constexpr bool kDebugFrame = false;
         static const constexpr bool kDebugCommands = false;
+        using gate_array_t = std::array<uint8_t, 14>;
+        struct energy_stat_t
+        {
+            uint8_t min;
+            uint8_t max;
+            uint8_t avg;
+        };
+        using energy_stat_array_t = std::array<energy_stat_t, 14>;
+
         enum class ErrorCode: uint8_t
         {
             Ok,
@@ -133,8 +142,8 @@ namespace hlk{
         struct Configuration
         {
             BaseConfigData m_Base;
-            uint8_t m_MoveThreshold[14] = {0};
-            uint8_t m_StillThreshold[14] = {0};
+            gate_array_t m_MoveThreshold = {0};
+            gate_array_t m_StillThreshold = {0};
             LightSensitivityConfig m_LightSense;
         };
 #pragma pack(pop)
@@ -200,6 +209,9 @@ namespace hlk{
 
             ConfigBlock& SetMoveThreshold(uint8_t gate, uint8_t energy);
             ConfigBlock& SetStillThreshold(uint8_t gate, uint8_t energy);
+
+            ConfigBlock& SetMoveThresholds(gate_array_t const& thresholds);
+            ConfigBlock& SetStillThresholds(gate_array_t const& thresholds);
 
             ConfigBlock& SetLightSensitivity(LightSensitivity senseMode, uint8_t lightThreshold);
 
@@ -267,6 +279,8 @@ namespace hlk{
 
         auto const& GetBluetoothMAC() const { return m_BluetoothMAC; }
         ExpectedResult SwitchBluetooth(bool on);
+
+        auto GetLastBluetoothState() const { return m_LastBluetoothState; }
 
         ExpectedResult Restart();
         ExpectedResult FactoryReset();
@@ -386,6 +400,7 @@ namespace hlk{
         Engeneering m_Engeneering;
 
         uint8_t m_BluetoothMAC[6] = {0};
+        bool m_LastBluetoothState = false;
         struct DistanceResBuf
         {
             DistanceRes m_Res = DistanceRes::_0_75;

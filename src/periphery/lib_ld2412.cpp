@@ -247,6 +247,7 @@ namespace hlk{
             auto rs = ChangeConfiguration().SetSystemMode(m_Mode).EndChange();
             LD2412_TRY_UART_COMM(rs, "SwitchBluetooth", ErrorCode::BTFailed);
         }
+        m_LastBluetoothState = on;
         return ReloadConfig();
     }
 
@@ -507,6 +508,20 @@ namespace hlk{
 
         m_Changed.StillThreshold = true;
         m_Configuration.m_StillThreshold[gate] = energy;
+        return *this;
+    }
+
+    LD2412::ConfigBlock& LD2412::ConfigBlock::SetMoveThresholds(gate_array_t const& thresholds)
+    {
+        m_Changed.MoveThreshold = true;
+        m_Configuration.m_MoveThreshold = thresholds;
+        return *this;
+    }
+
+    LD2412::ConfigBlock& LD2412::ConfigBlock::SetStillThresholds(gate_array_t const& thresholds)
+    {
+        m_Changed.StillThreshold = true;
+        m_Configuration.m_StillThreshold = thresholds;
         return *this;
     }
 
