@@ -292,8 +292,8 @@ namespace hlk{
 
         void StartContinuousReading();
         void StopContinuousReading();
-        ExpectedResult TryReadFrame(int attempts = 3, bool flush = false, Drain drain = Drain::No);
-        ExpectedResult TryReadSingleFrame(int attempts = 3, bool flush = false, Drain drain = Drain::No);
+        ExpectedResult TryReadFrame(int attempts = 3, Drain drain = Drain::No);
+        ExpectedResult TryReadSingleFrame(int attempts = 3, Drain drain = Drain::No);
 
         ExpectedResult RunDynamicBackgroundAnalysis();
         bool IsDynamicBackgroundAnalysisRunning();

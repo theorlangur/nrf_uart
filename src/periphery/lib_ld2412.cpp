@@ -349,12 +349,12 @@ namespace hlk{
         return std::ref(*this);
     }
 
-    LD2412::ExpectedResult LD2412::TryReadSingleFrame(int attempts, bool flush, Drain drain)
+    LD2412::ExpectedResult LD2412::TryReadSingleFrame(int attempts, Drain drain)
     {
         if (m_ContinuousRead)
-            return TryReadFrame(attempts, flush, drain);
+            return TryReadFrame(attempts, drain);
         RxBlock _RxBlock(*this);
-        return TryReadFrame(attempts, flush, drain);
+        return TryReadFrame(attempts, drain);
     }
 
     void LD2412::StartContinuousReading()
@@ -369,7 +369,7 @@ namespace hlk{
         m_ContinuousRead = false;
     }
 
-    LD2412::ExpectedResult LD2412::TryReadFrame(int attempts, bool flush, Drain drain)
+    LD2412::ExpectedResult LD2412::TryReadFrame(int attempts, Drain drain)
     {
         if (drain != Drain::No)
         {
@@ -382,7 +382,7 @@ namespace hlk{
                     if (i > 0)//if i is at least 2 that means that at least 1 iteration was successful 
                         break;
                     else if (drain == Drain::Try)
-                        return TryReadFrame(attempts, flush, Drain::No);
+                        return TryReadFrame(attempts, Drain::No);
                     else
                         return r;
                 }
