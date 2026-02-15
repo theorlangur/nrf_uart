@@ -202,6 +202,12 @@ namespace hlk{
     {
     }
 
+    uint8_t LD2412::GetGateFromDistanceCM(int dist, DistanceRes res) 
+    {
+        auto f = GetDistanceResFactor(res);
+        return std::clamp(dist * 100 / f, 1, 12);
+    }
+
     LD2412::ExpectedResult LD2412::Init()
     {
         SetDefaultWait(kDefaultWait);
@@ -455,8 +461,7 @@ namespace hlk{
     {
         m_Changed.MinDistance = true;
         auto r = m_Changed.DistanceRes ? m_NewDistanceRes : d.GetDistanceRes();
-        auto f = GetDistanceResFactor(r);
-        m_Configuration.m_Base.m_MinDistanceGate = std::clamp(dist * 100 / f, 1, 12);
+        m_Configuration.m_Base.m_MinDistanceGate = GetGateFromDistanceCM(dist, r);
         return *this;
     }
     LD2412::ConfigBlock& LD2412::ConfigBlock::SetMinDistanceRaw(uint8_t dist)
@@ -470,7 +475,7 @@ namespace hlk{
         m_Changed.MaxDistance = true;
         auto r = m_Changed.DistanceRes ? m_NewDistanceRes : d.GetDistanceRes();
         auto f = GetDistanceResFactor(r);
-        m_Configuration.m_Base.m_MaxDistanceGate = std::clamp(dist * 100 / f, 1, 12);
+        m_Configuration.m_Base.m_MaxDistanceGate = GetGateFromDistanceCM(dist, r);
         return *this;
     }
 

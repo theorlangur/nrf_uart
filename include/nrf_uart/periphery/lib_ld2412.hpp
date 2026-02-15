@@ -249,6 +249,8 @@ namespace hlk{
         SystemMode GetSystemMode() const { return m_Mode; }
         auto GetDistanceRes() const { return m_DistanceResolution.m_Res; }
 
+        static uint8_t GetGateFromDistanceCM(int dist, DistanceRes res);
+
         //distance in cm
         int GetMinDistance() const { return m_Configuration.m_Base.m_MinDistanceGate * GetDistanceResFactor(GetDistanceRes()) / 100; }
         uint8_t GetMinDistanceRaw() const { return m_Configuration.m_Base.m_MinDistanceGate; }
