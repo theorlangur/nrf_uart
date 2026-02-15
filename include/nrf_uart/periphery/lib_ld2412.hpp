@@ -413,7 +413,7 @@ namespace hlk{
         PresenceResult m_Presence;
         Engeneering m_Engeneering;
 
-        uint8_t m_BluetoothMAC[6] = {0};
+        std::array<uint8_t, 6> m_BluetoothMAC = {0};
         bool m_LastBluetoothState = false;
         struct DistanceResBuf
         {
