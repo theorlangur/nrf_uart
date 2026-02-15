@@ -247,11 +247,14 @@ namespace hlk{
         ExpectedResult Init();
 
         SystemMode GetSystemMode() const { return m_Mode; }
+        auto GetDistanceRes() const { return m_DistanceResolution.m_Res; }
 
-        int GetMinDistance() const { return m_Configuration.m_Base.m_MinDistanceGate * 75 / 100; }
+        //distance in cm
+        int GetMinDistance() const { return m_Configuration.m_Base.m_MinDistanceGate * GetDistanceResFactor(GetDistanceRes()) / 100; }
         uint8_t GetMinDistanceRaw() const { return m_Configuration.m_Base.m_MinDistanceGate; }
 
-        int GetMaxDistance() const { return m_Configuration.m_Base.m_MaxDistanceGate * 75 / 100; }
+        //distance in cm
+        int GetMaxDistance() const { return m_Configuration.m_Base.m_MaxDistanceGate * GetDistanceResFactor(GetDistanceRes()) / 100; }
         uint8_t GetMaxDistanceRaw() const { return m_Configuration.m_Base.m_MaxDistanceGate; }
 
         auto GetMoveThreshold(uint8_t gate) const { return m_Configuration.m_MoveThreshold[gate]; }
@@ -266,7 +269,6 @@ namespace hlk{
 
         auto GetTimeout() const { return m_Configuration.m_Base.m_Duration; }//seconds
         bool GetOutPinPolarity() const { return m_Configuration.m_Base.m_OutputPinPolarity; }
-        auto GetDistanceRes() const { return m_DistanceResolution.m_Res; }
 
         auto GetLightSensitivityMode() const { return m_Configuration.m_LightSense.m_Mode; }
         auto GetLightSensitivityThreshold() const { return m_Configuration.m_LightSense.m_ThresholdLevel; }
@@ -298,6 +300,16 @@ namespace hlk{
         ExpectedResult RunDynamicBackgroundAnalysis();
         bool IsDynamicBackgroundAnalysisRunning();
     private:
+        static int GetDistanceResFactor(DistanceRes r)
+        { 
+            switch(r)
+            {
+                case DistanceRes::_0_20: return 20;
+                case DistanceRes::_0_50: return 50;
+                case DistanceRes::_0_75: return 75;
+            }
+            return 75;
+        }
         enum class Cmd: uint16_t
         {
             ReadVer = 0x00a0,

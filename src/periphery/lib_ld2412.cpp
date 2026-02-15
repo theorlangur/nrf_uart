@@ -454,7 +454,9 @@ namespace hlk{
     LD2412::ConfigBlock& LD2412::ConfigBlock::SetMinDistance(int dist)
     {
         m_Changed.MinDistance = true;
-        m_Configuration.m_Base.m_MinDistanceGate = std::clamp(dist * 10 / 7, 1, 12);
+        auto r = m_Changed.DistanceRes ? m_NewDistanceRes : d.GetDistanceRes();
+        auto f = GetDistanceResFactor(r);
+        m_Configuration.m_Base.m_MinDistanceGate = std::clamp(dist * 100 / f, 1, 12);
         return *this;
     }
     LD2412::ConfigBlock& LD2412::ConfigBlock::SetMinDistanceRaw(uint8_t dist)
@@ -466,7 +468,9 @@ namespace hlk{
     LD2412::ConfigBlock& LD2412::ConfigBlock::SetMaxDistance(int dist)
     {
         m_Changed.MaxDistance = true;
-        m_Configuration.m_Base.m_MaxDistanceGate = std::clamp(dist * 10 / 7, 1, 12);
+        auto r = m_Changed.DistanceRes ? m_NewDistanceRes : d.GetDistanceRes();
+        auto f = GetDistanceResFactor(r);
+        m_Configuration.m_Base.m_MaxDistanceGate = std::clamp(dist * 100 / f, 1, 12);
         return *this;
     }
 
