@@ -83,7 +83,6 @@ namespace hlk{
             _0_20 = 3,
         };
 
-        //TODO: implement
         enum class LightSensitivity: uint8_t
         {
             Off = 0,
