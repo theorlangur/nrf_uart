@@ -205,7 +205,7 @@ namespace hlk{
     uint8_t LD2412::GetGateFromDistanceCM(int dist, DistanceRes res) 
     {
         auto f = GetDistanceResFactor(res);
-        return std::clamp(dist * 100 / f, 1, 12);
+        return std::clamp(dist / f, 1, 14);
     }
 
     LD2412::ExpectedResult LD2412::Init()
