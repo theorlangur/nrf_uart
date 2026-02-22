@@ -251,11 +251,11 @@ namespace hlk{
         static uint8_t GetGateFromDistanceCM(int dist, DistanceRes res);
 
         //distance in cm
-        int GetMinDistance() const { return m_Configuration.m_Base.m_MinDistanceGate * GetDistanceResFactor(GetDistanceRes()) / 100; }
+        int GetMinDistance() const { return m_Configuration.m_Base.m_MinDistanceGate * GetDistanceResFactor(GetDistanceRes()); }
         uint8_t GetMinDistanceRaw() const { return m_Configuration.m_Base.m_MinDistanceGate; }
 
         //distance in cm
-        int GetMaxDistance() const { return m_Configuration.m_Base.m_MaxDistanceGate * GetDistanceResFactor(GetDistanceRes()) / 100; }
+        int GetMaxDistance() const { return m_Configuration.m_Base.m_MaxDistanceGate * GetDistanceResFactor(GetDistanceRes()); }
         uint8_t GetMaxDistanceRaw() const { return m_Configuration.m_Base.m_MaxDistanceGate; }
 
         auto GetMoveThreshold(uint8_t gate) const { return m_Configuration.m_MoveThreshold[gate]; }
