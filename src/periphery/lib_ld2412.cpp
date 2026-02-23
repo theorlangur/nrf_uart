@@ -18,7 +18,7 @@
     {\
         if (retry) \
         {\
-            printk("Failed on " #f "\n");\
+            if (m_dbg) printk("Failed on " #f "\n");\
             continue;\
         }\
         return to_cmd_result(std::move(r), location, ec);\
