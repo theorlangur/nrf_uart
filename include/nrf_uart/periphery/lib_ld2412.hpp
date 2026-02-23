@@ -186,7 +186,9 @@ namespace hlk{
             LD2412 &d;
             RxBlock rxBlock;
 
-            ConfigBlock(LD2412 &d): d(d), rxBlock(d), m_Configuration(d.m_Configuration) {}
+            ConfigBlock(LD2412 &d, bool refreshAfterSet = false): d(d), rxBlock(d), m_Configuration(d.m_Configuration) {
+                m_RefreshAfterSet = refreshAfterSet;
+            }
             ConfigBlock(ConfigBlock const&) = delete;
             ConfigBlock(ConfigBlock &&) = delete;
             ConfigBlock& operator=(ConfigBlock const &) = delete;
@@ -219,6 +221,7 @@ namespace hlk{
             SystemMode m_NewMode;
             DistanceRes m_NewDistanceRes;
             Configuration m_Configuration;
+            bool m_RefreshAfterSet = false;
 
             union{
                 struct
@@ -274,7 +277,7 @@ namespace hlk{
         auto GetLightSensitivityMode() const { return m_Configuration.m_LightSense.m_Mode; }
         auto GetLightSensitivityThreshold() const { return m_Configuration.m_LightSense.m_ThresholdLevel; }
 
-        ConfigBlock ChangeConfiguration() { return {*this}; }
+        ConfigBlock ChangeConfiguration(bool refreshAfterSet = false) { return {*this, refreshAfterSet}; }
 
         ExpectedResult UpdateDistanceRes();
 

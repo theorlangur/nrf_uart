@@ -560,26 +560,48 @@ namespace hlk{
         {
             d.m_DistanceResolution.m_Res = m_NewDistanceRes; 
             LD2412_TRY_UART_COMM(d.SetDistanceResInternal(m_NewDistanceRes), "LD2412::ConfigBlock::EndChange", ErrorCode::SendCommand_Failed);
+            if (m_RefreshAfterSet)
+            {
+                LD2412_TRY_UART_COMM(d.SendCommand(Cmd::GetDistanceRes, to_send(), to_recv(d.m_DistanceResolution)), "LD2412::ConfigBlock::EndChange", ErrorCode::SendCommand_Failed);
+            }
         }
         if (m_Changed.MinDistance || m_Changed.MaxDistance || m_Changed.Timeout || m_Changed.OutPin)
         {
             LD2412_TRY_UART_COMM(d.SendCommand(Cmd::WriteBaseParams ,to_send(m_Configuration.m_Base) ,to_recv()), "LD2412::ConfigBlock::EndChange", ErrorCode::SendCommand_Failed);
             d.m_Configuration.m_Base = m_Configuration.m_Base;
+            if (m_RefreshAfterSet)
+            {
+                LD2412_TRY_UART_COMM(d.SendCommand(Cmd::ReadBaseParams, to_send(), to_recv(d.m_Configuration.m_Base)), "LD2412::ConfigBlock::EndChange", ErrorCode::SendCommand_Failed);
+            }
         }
+
+
         if (m_Changed.MoveThreshold)
         {
             LD2412_TRY_UART_COMM(d.SendCommand(Cmd::SetMoveSensitivity ,to_send(m_Configuration.m_MoveThreshold) ,to_recv()), "LD2412::ConfigBlock::EndChange", ErrorCode::SendCommand_Failed);
             d.m_Configuration.m_MoveThreshold = m_Configuration.m_MoveThreshold;
+            if (m_RefreshAfterSet)
+            {
+                LD2412_TRY_UART_COMM(d.SendCommand(Cmd::GetMoveSensitivity, to_send(), to_recv(d.m_Configuration.m_MoveThreshold)), "LD2412::ConfigBlock::EndChange", ErrorCode::SendCommand_Failed);
+            }
         }
         if (m_Changed.StillThreshold)
         {
             LD2412_TRY_UART_COMM(d.SendCommand(Cmd::SetStillSensitivity ,to_send(m_Configuration.m_StillThreshold) ,to_recv()), "LD2412::ConfigBlock::EndChange", ErrorCode::SendCommand_Failed);
             d.m_Configuration.m_StillThreshold = m_Configuration.m_StillThreshold;
+            if (m_RefreshAfterSet)
+            {
+                LD2412_TRY_UART_COMM(d.SendCommand(Cmd::GetStillSensitivity, to_send(), to_recv(d.m_Configuration.m_StillThreshold)), "LD2412::ConfigBlock::EndChange", ErrorCode::SendCommand_Failed);
+            }
         }
         if (m_Changed.LightSens)
         {
             LD2412_TRY_UART_COMM(d.SendCommand(Cmd::SetLightSensitivity ,to_send(m_Configuration.m_LightSense) ,to_recv()), "LD2412::ConfigBlock::EndChange", ErrorCode::SendCommand_Failed);
             d.m_Configuration.m_LightSense = m_Configuration.m_LightSense;
+            if (m_RefreshAfterSet)
+            {
+                LD2412_TRY_UART_COMM(d.SendCommand(Cmd::GetLightSensitivity, to_send(), to_recv(d.m_Configuration.m_LightSense)), "LD2412::ConfigBlock::EndChange", ErrorCode::SendCommand_Failed);
+            }
         }
         LD2412_TRY_UART_COMM(d.CloseCommandMode(), "LD2412::ConfigBlock::EndChange", ErrorCode::SendCommand_Failed);
         return std::ref(d);
