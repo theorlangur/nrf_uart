@@ -16,14 +16,17 @@ namespace hlk{
         static const constexpr uart::duration_ms_t kDefaultWait{350};
         static const constexpr bool kDebugFrame = false;
         static const constexpr bool kDebugCommands = false;
-        using gate_array_t = std::array<uint8_t, 14>;
+        static const constexpr uint8_t kMinGate = 0;
+        static const constexpr uint8_t kMaxGate = 13;
+        static const constexpr uint8_t kGateCount = 14;
+        using gate_array_t = std::array<uint8_t, kGateCount>;
         struct energy_stat_t
         {
             uint8_t min;
             uint8_t max;
             uint8_t avg;
         };
-        using energy_stat_array_t = std::array<energy_stat_t, 14>;
+        using energy_stat_array_t = std::array<energy_stat_t, kGateCount>;
 
         enum class ErrorCode: uint8_t
         {

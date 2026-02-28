@@ -205,7 +205,7 @@ namespace hlk{
     uint8_t LD2412::GetGateFromDistanceCM(int dist, DistanceRes res) 
     {
         auto f = GetDistanceResFactor(res);
-        return std::clamp(dist / f, 1, 14);
+        return std::clamp(uint8_t(dist / f), kMinGate, kMaxGate);
     }
 
     LD2412::ExpectedResult LD2412::Init()
@@ -467,7 +467,7 @@ namespace hlk{
     LD2412::ConfigBlock& LD2412::ConfigBlock::SetMinDistanceRaw(uint8_t dist)
     {
         m_Changed.MinDistance = true;
-        m_Configuration.m_Base.m_MinDistanceGate = std::clamp(dist, uint8_t(1), uint8_t(12));
+        m_Configuration.m_Base.m_MinDistanceGate = std::clamp(dist, kMinGate, kMaxGate);
         return *this;
     }
     LD2412::ConfigBlock& LD2412::ConfigBlock::SetMaxDistance(int dist)
@@ -482,7 +482,7 @@ namespace hlk{
     LD2412::ConfigBlock& LD2412::ConfigBlock::SetMaxDistanceRaw(uint8_t dist)
     {
         m_Changed.MaxDistance = true;
-        m_Configuration.m_Base.m_MaxDistanceGate = std::clamp(dist, uint8_t(1), uint8_t(12));
+        m_Configuration.m_Base.m_MaxDistanceGate = std::clamp(dist, kMinGate, kMaxGate);
         return *this;
     }
 
@@ -502,7 +502,7 @@ namespace hlk{
 
     LD2412::ConfigBlock& LD2412::ConfigBlock::SetMoveThreshold(uint8_t gate, uint8_t energy)
     {
-        if (gate > 13)
+        if (gate > kMaxGate)
             return *this;
 
         m_Changed.MoveThreshold = true;
@@ -512,7 +512,7 @@ namespace hlk{
 
     LD2412::ConfigBlock& LD2412::ConfigBlock::SetStillThreshold(uint8_t gate, uint8_t energy)
     {
-        if (gate > 13)
+        if (gate > kMaxGate)
             return *this;
 
         m_Changed.StillThreshold = true;
