@@ -126,8 +126,9 @@ namespace uart
     };
 }
 
+namespace tools{
 template<>
-struct ::tools::formatter_t<::Err>
+struct formatter_t<::Err>
 {
     template<FormatDestination Dest>
     static std::expected<size_t, FormatError> format_to(Dest &&dst, std::string_view const& fmtStr, ::Err const& e)
@@ -135,5 +136,6 @@ struct ::tools::formatter_t<::Err>
         return tools::format_to(std::forward<Dest>(dst), "E<{} at {}>", e.code, e.pLocation);
     }
 };
+}
 
 #endif

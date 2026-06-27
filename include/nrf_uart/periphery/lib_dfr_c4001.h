@@ -415,14 +415,16 @@ namespace dfr
     };
 }
 
-template<>
-struct ::tools::formatter_t<dfr::C4001::Err>
-{
-    template<FormatDestination Dest>
-    static std::expected<size_t, FormatError> format_to(Dest &&dst, std::string_view const& fmtStr, dfr::C4001::Err const& e)
-    {
-        return tools::format_to(std::forward<Dest>(dst), "Err\\{uart=[{}] at {} }", e.uartErr, e.pLocation);
-    }
-};
+namespace tools{
+    template<>
+        struct formatter_t<dfr::C4001::Err>
+        {
+            template<FormatDestination Dest>
+                static std::expected<size_t, FormatError> format_to(Dest &&dst, std::string_view const& fmtStr, dfr::C4001::Err const& e)
+                {
+                    return tools::format_to(std::forward<Dest>(dst), "Err\\{uart=[{}] at {} }", e.uartErr, e.pLocation);
+                }
+        };
+}
 
 #endif

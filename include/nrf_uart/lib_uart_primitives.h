@@ -387,7 +387,7 @@ namespace uart
             using ExpectedResult = std::expected<Channel::Ref, ::Err>;
             if (auto r = c.Read(pDst, l); !r)
                 return ExpectedResult(std::unexpected(r.error()));
-            else if (r.value().v != l)
+            else if ((int)r.value().v != l)
                 return ExpectedResult(std::unexpected(::Err{"read_into_bytes wrong len", ERR_OK}));
 
             return ExpectedResult(std::ref(c));
