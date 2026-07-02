@@ -233,6 +233,7 @@ namespace hlk{
 
     LD2412::ExpectedResult LD2412::UpdateDistanceRes()
     {
+        RxBlock _RxBlock(*this);
         LD2412_TRY_UART_COMM(OpenCommandMode(), "UpdateDistanceRes", ErrorCode::SendCommand_Failed);
         LD2412_TRY_UART_COMM(SendCommand(Cmd::GetDistanceRes, to_send(), to_recv(m_DistanceResolution)), "UpdateDistanceRes", ErrorCode::SendCommand_Failed);
         LD2412_TRY_UART_COMM(CloseCommandMode(), "UpdateDistanceRes", ErrorCode::SendCommand_Failed);
@@ -241,6 +242,7 @@ namespace hlk{
 
     LD2412::ExpectedResult LD2412::SwitchBluetooth(bool on)
     {
+        RxBlock _RxBlock(*this);
         namespace uartp = uart::primitives;
         SetDefaultWait(kDefaultWait);
         LD2412_TRY_UART_COMM(OpenCommandMode(), "SwitchBluetooth", ErrorCode::BTFailed);
@@ -259,6 +261,7 @@ namespace hlk{
 
     LD2412::ExpectedResult LD2412::Restart()
     {
+        RxBlock _RxBlock(*this);
         namespace uartp = uart::primitives;
         SetDefaultWait(kDefaultWait);
         LD2412_TRY_UART_COMM(OpenCommandMode(), "Restart", ErrorCode::RestartFailed);
@@ -275,6 +278,7 @@ namespace hlk{
 
     LD2412::ExpectedResult LD2412::FactoryReset()
     {
+        RxBlock _RxBlock(*this);
         namespace uartp = uart::primitives;
         SetDefaultWait(uart::duration_ms_t(1000));
         LD2412_TRY_UART_COMM(OpenCommandMode(), "FactoryReset", ErrorCode::FactoryResetFailed);
@@ -414,6 +418,8 @@ namespace hlk{
     {
         if (m_DynamicBackgroundAnalysis)
             return std::unexpected(Err{{}, "RunDynamicBackgroundAnalysis", ErrorCode::WrongState});
+        RxBlock _RxBlock(*this);
+        //DbgNow _dbg(this);
         SetDefaultWait(kDefaultWait);
         LD2412_TRY_UART_COMM(OpenCommandMode(), "RunDynamicBackgroundAnalysis", ErrorCode::SendCommand_Failed);
         LD2412_TRY_UART_COMM(SendCommand(Cmd::RunDynamicBackgroundAnalysis, to_send(), to_recv()), "RunDynamicBackgroundAnalysis", ErrorCode::SendCommand_Failed);
@@ -431,6 +437,7 @@ namespace hlk{
 
     LD2412::ExpectedResult LD2412::QueryDynamicBackgroundAnalysisRunState()
     {
+        RxBlock _RxBlock(*this);
         SetDefaultWait(kDefaultWait);
         uint16_t active = 0;
         LD2412_TRY_UART_COMM(OpenCommandMode(), "QueryDynamicBackgroundAnalysisRunState", ErrorCode::SendCommand_Failed);
